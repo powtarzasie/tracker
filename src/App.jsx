@@ -117,6 +117,7 @@ const weekRange = d => {
 };
 const parseDieta = v => { if (!v) return null; if (v==="90-100%") return 9; if (v==="60-80%") return 7; if (v==="<60%") return 4; const n=parseInt(v); return isNaN(n)?null:Math.round(n/10); };
 const ENERGIA_EMOJI   = {"2":"🪫","4":"😪","6":"😐","8":"😊","10":"🔥"};
+const ENERGIA_LABEL   = {"2":"Bez energii","4":"Słabo","6":"Przeciętnie","8":"Dobrze","10":"Pełen mocy"};
 const SENJAKOSC_EMOJI = {"2":"😵","4":"😫","6":"😑","8":"🙂","10":"😴"};
 const STRES_LABEL     = {"2":"Niski","5":"Średni","8":"Wysoki"};
 const SILA_LABEL      = {"⬆️":"Wzrost","➖":"Stagnacja","⬇️":"Spadek"};
@@ -185,7 +186,7 @@ function EmojiSelect({ value, onChange, options, hasError }) {
     <div style={{ display:"flex",gap:6,padding:hasError?8:0,borderRadius:10,border:hasError?`1.5px solid ${T.rose}66`:"none",background:hasError?`${T.rose}0d`:"transparent" }}>
       {options.map(o => {
         const active = value===o.val;
-        return <button key={o.val} onClick={()=>onChange(o.val)} style={{ flex:1,height:52,borderRadius:14,border:`2px solid ${active?T.cyan+"99":T.borderBright}`,cursor:"pointer",fontSize:24,display:"flex",alignItems:"center",justifyContent:"center",background:active?`${T.cyan}20`:T.surface,transform:active?"scale(1.12)":"scale(1)",transition:"all .15s cubic-bezier(.34,1.56,.64,1)",filter:active?"none":"grayscale(30%)" }}>{o.emoji}</button>;
+        return <button key={o.val} onClick={()=>onChange(o.val)} style={{ flex:1,height:o.label?66:52,borderRadius:14,border:`2px solid ${active?T.cyan+"99":T.borderBright}`,cursor:"pointer",fontSize:o.label?20:24,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:3,background:active?`${T.cyan}20`:T.surface,transform:active?"scale(1.12)":"scale(1)",transition:"all .15s cubic-bezier(.34,1.56,.64,1)",filter:active?"none":"grayscale(30%)" }}>{o.emoji}{o.label&&<span style={{fontSize:8,color:active?T.cyan:T.textMuted,fontWeight:700,letterSpacing:"0.03em",textTransform:"uppercase",lineHeight:1}}>{o.label}</span>}</button>;
       })}
     </div>
   );
@@ -270,7 +271,8 @@ function FullReportBlock({ r, label, dimmed, comments={} }) {
         </div>
         <span style={{ color:T.textMuted,fontSize:12 }}>{expanded?"▲":"▼"}</span>
       </div>
-      <div style={{ display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:8 }}>
+      <div style={{ fontSize:9,color:T.textMuted,textTransform:"uppercase",letterSpacing:"0.1em",fontWeight:700,marginBottom:6,paddingLeft:2 }}>🏆 Wyniki</div>
+      <div style={{ display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:8,marginBottom:14 }}>
         {(()=>{
           const hasPas = r.pas && r.pas !== "brak info";
           return (
@@ -278,10 +280,16 @@ function FullReportBlock({ r, label, dimmed, comments={} }) {
           );
         })()}
         <StatCard label="Trening" value={r.treningiWykonane&&r.treningiPlan ? `${r.treningiWykonane}/${r.treningiPlan}` : "–"} sub={r.treningiWykonane&&r.treningiPlan ? "sesji" : undefined} color={fade||T.violet} val2={r.sila ? (r.sila==="⬆️"?"↑":r.sila==="⬇️"?"↓":"→") : undefined} label2="siła" color2={fade||(r.sila==="⬆️"?T.lime:r.sila==="⬇️"?T.rose:T.textSub)} />
-        <StatCard label="Dieta" value={r.dietaTrzymanie==="90-100%"?"A":r.dietaTrzymanie==="60-80%"?"B":r.dietaTrzymanie==="<60%"?"C":"–"} sub={r.dietaTrzymanie==="90-100%"?"Clean":r.dietaTrzymanie==="60-80%"?"Mixed":r.dietaTrzymanie==="<60%"?"Dirty":undefined} color={fade||(r.dietaTrzymanie==="90-100%"?T.lime:r.dietaTrzymanie==="60-80%"?T.amber:r.dietaTrzymanie?T.rose:undefined)} val2={r.kcal&&r.kcal!=="brak info" ? r.kcal : undefined} label2="kcal" color2={fade||T.amber} />
+        <StatCard label="Dieta" value={r.dietaTrzymanie==="90-100%"?"Clean":r.dietaTrzymanie==="60-80%"?"Mixed":r.dietaTrzymanie==="<60%"?"Dirty":"–"} color={fade||(r.dietaTrzymanie==="90-100%"?T.lime:r.dietaTrzymanie==="60-80%"?T.amber:r.dietaTrzymanie?T.rose:undefined)} val2={r.kcal&&r.kcal!=="brak info" ? r.kcal : undefined} label2="kcal" color2={fade||T.amber} />
+      </div>
+      <div style={{ fontSize:9,color:T.textMuted,textTransform:"uppercase",letterSpacing:"0.1em",fontWeight:700,marginBottom:6,paddingLeft:2 }}>💤 Samopoczucie</div>
+      <div style={{ display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:8,marginBottom:14 }}>
         <StatCard label="Sen jakość" value={displaySen(r.senJakosc)} color={fade||scoreColor(parseInt(r.senJakosc))} val2={r.sen ? `${r.sen}h` : undefined} label2="długość" color2={fade||T.emerald} />
-        <StatCard label="Energia" value={displayEnergia(r.energia)} color={fade||scoreColor(parseInt(r.energia))} />
+        <StatCard label="Energia" value={displayEnergia(r.energia)} sub={r.energia?ENERGIA_LABEL[r.energia]:undefined} color={fade||scoreColor(parseInt(r.energia))} />
         <StatCard label="Stres" value={displayStres(r.stres)} color={fade||scoreColor(10-(r.stres==="2"?2:r.stres==="5"?5:8))} />
+      </div>
+      <div style={{ fontSize:9,color:T.textMuted,textTransform:"uppercase",letterSpacing:"0.1em",fontWeight:700,marginBottom:6,paddingLeft:2 }}>🥗 Dieta / Suplementacja</div>
+      <div style={{ display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:8 }}>
         {(()=>{
           const raw=r.bialko;
           if(!raw||raw==="brak info") return <StatCard label="Białko g/kg" value="–" />;
@@ -388,7 +396,7 @@ function ClientForm({ onSave, onExit }) {
         <Field label="Zdjęcia progresowe"><LabelSelect value={form.zdjecia} onChange={v=>set("zdjecia",v)} options={[{val:"TAK",label:"Zrobiłem"},{val:"NIE",label:"Nie"}]} /></Field>
       </StepCard>
       <StepCard num="2" icon="⚡" title="Jak się czujesz?" color={T.amber}>
-        <Field label="Poziom energii"><EmojiSelect value={form.energia} onChange={v=>set("energia",v)} hasError={errors.energia} options={[{val:"2",emoji:"🪫"},{val:"4",emoji:"😪"},{val:"6",emoji:"😐"},{val:"8",emoji:"😊"},{val:"10",emoji:"🔥"}]} />{!errors.energia&&<div style={{ display:"flex",justifyContent:"space-between",marginTop:5,fontSize:10,color:T.textMuted,padding:"0 4px" }}><span>brak energii</span><span>pełen energii</span></div>}</Field>
+        <Field label="Poziom energii"><EmojiSelect value={form.energia} onChange={v=>set("energia",v)} hasError={errors.energia} options={[{val:"2",emoji:"🪫",label:"Bez energii"},{val:"4",emoji:"😪",label:"Słabo"},{val:"6",emoji:"😐",label:"Przeciętnie"},{val:"8",emoji:"😊",label:"Dobrze"},{val:"10",emoji:"🔥",label:"Pełen mocy"}]} /></Field>
         <Field label="Poziom stresu"><LabelSelect value={form.stres} onChange={v=>set("stres",v)} hasError={errors.stres} options={[{val:"2",label:"Niski"},{val:"5",label:"Średni"},{val:"8",label:"Wysoki"}]} /></Field>
         <Field label="Ból / kontuzja"><LabelSelect value={form.bol} onChange={v=>set("bol",v)} options={[{val:"NIE",label:"Brak"},{val:"TAK",label:"Mam ból"}]} /></Field>
         {form.bol==="TAK"&&<Field label="Gdzie boli?"><input placeholder="np. lewe kolano, bark..." value={form.bolMiejsce} onChange={e=>set("bolMiejsce",e.target.value)} className={inp("bolMiejsce")} /></Field>}
@@ -465,7 +473,9 @@ function TrainerDashboard({ reports, onUpdateReports, comments, onUpdateComments
   const deleteReport = useCallback(async id => { const filtered = reports.filter(r=>r.id!==id); await onUpdateReports(filtered); const upd = { ...comments }; delete upd[id]; await onUpdateComments(upd); setDeleteConfirm(null); setDeleteConfirm2(null); }, [reports, comments, onUpdateReports, onUpdateComments]);
   const saveComment = useCallback(async id => { if (!draftComment.trim()) return; setSavingCmt(true); const upd = { ...comments, [id]: draftComment }; await onUpdateComments(upd); setEditingId(null); setDraftComment(""); setSavedCmtId(id); setTimeout(()=>setSavedCmtId(null),3000); setSavingCmt(false); }, [draftComment, comments, onUpdateComments]);
   const delComment = useCallback(async id => { const upd = { ...comments }; delete upd[id]; await onUpdateComments(upd); }, [comments, onUpdateComments]);
-  const tooltipStyle = { background:T.bg==="#07090f"?"#0b0e18":"#fff",border:`1.5px solid ${T.border}`,borderRadius:10,color:T.text,fontSize:12,boxShadow:"0 8px 32px rgba(0,0,0,0.3)" };
+  const tooltipStyle = { background:T.bg==="#07090f"?"#0b0e18":"#ffffff",border:`1.5px solid ${T.border}`,borderRadius:10,color:T.text,fontSize:12,boxShadow:"0 8px 32px rgba(0,0,0,0.18)" };
+  const gridStroke = T.bg==="#07090f"?"rgba(255,255,255,0.06)":"rgba(0,0,0,0.08)";
+  const tickStyle = { fill:T.textSub,fontSize:11 };
   const weightData = sorted.filter(r=>r.sredniaTygodnia||r.waga).map(r=>({name:r.data?.slice(5),val:parseFloat(r.sredniaTygodnia||r.waga)}));
   const pasData = sorted.filter(r=>r.pas).map(r=>({name:r.data?.slice(5),val:parseFloat(r.pas)}));
   const wellnessData = sorted.map(r=>({name:r.data?.slice(5),Energia:parseInt(r.energia)||null,Sen:parseInt(r.senJakosc)||null,Stres:parseInt(r.stres)||null,Dieta:parseDieta(r.dietaTrzymanie)}));
@@ -495,7 +505,7 @@ function TrainerDashboard({ reports, onUpdateReports, comments, onUpdateComments
                 <div style={{ display:"flex",alignItems:"center",gap:6,fontSize:11,color:"#e2e8f0" }}><svg width="22" height="8"><line x1="0" y1="4" x2="22" y2="4" stroke={T.amber} strokeWidth="2.5"/></svg>Ostatni tydzień</div>
                 {prev&&<div style={{ display:"flex",alignItems:"center",gap:6,fontSize:11,color:"#a5b4fc" }}><svg width="22" height="8"><line x1="0" y1="4" x2="22" y2="4" stroke="#818cf8" strokeWidth="2" strokeDasharray="4 3"/></svg>Poprzedni tydzień</div>}
               </div>
-              <ResponsiveContainer width="100%" height={240}><RadarChart data={radarData}><PolarGrid stroke="rgba(255,255,255,0.07)" /><PolarAngleAxis dataKey="subject" tick={{ fill:"#64748b",fontSize:11 }} />{prev&&<Radar dataKey="prev" stroke="#818cf8" fill="#818cf8" fillOpacity={0.12} strokeWidth={2} strokeDasharray="5 3" />}<Radar dataKey="val" stroke={T.amber} fill={T.amber} fillOpacity={0.22} strokeWidth={2.5} /></RadarChart></ResponsiveContainer>
+              <ResponsiveContainer width="100%" height={240}><RadarChart data={radarData}><PolarGrid stroke={gridStroke} /><PolarAngleAxis dataKey="subject" tick={tickStyle} />{prev&&<Radar dataKey="prev" stroke="#818cf8" fill="#818cf8" fillOpacity={0.12} strokeWidth={2} strokeDasharray="5 3" />}<Radar dataKey="val" stroke={T.amber} fill={T.amber} fillOpacity={0.22} strokeWidth={2.5} /></RadarChart></ResponsiveContainer>
             </div>
           )}
           <div style={{ display:"flex",gap:8,flexWrap:"wrap" }}>
@@ -508,10 +518,10 @@ function TrainerDashboard({ reports, onUpdateReports, comments, onUpdateComments
       )}
       {activeTab==="charts"&&(
         <div className="fade-up">
-          {weightData.length>=1&&<ChartCard title="⚖️ Trend wagi (kg)" accent={T.cyan}><ResponsiveContainer width="100%" height={170}><LineChart data={weightData}><CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)"/><XAxis dataKey="name" tick={{fill:"#475569",fontSize:11}} axisLine={false} tickLine={false}/><YAxis tick={{fill:"#475569",fontSize:11}} domain={["auto","auto"]} axisLine={false} tickLine={false}/><Tooltip contentStyle={tooltipStyle}/><Line type="monotone" dataKey="val" stroke={T.cyan} strokeWidth={2.5} dot={{fill:T.cyan,r:5,strokeWidth:0}} activeDot={{r:7,fill:T.cyan}} name="Waga (kg)"/></LineChart></ResponsiveContainer></ChartCard>}
-          {pasData.length>=1&&<ChartCard title="📏 Trend pasa (cm)" accent={T.violet}><ResponsiveContainer width="100%" height={150}><LineChart data={pasData}><CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)"/><XAxis dataKey="name" tick={{fill:"#475569",fontSize:11}} axisLine={false} tickLine={false}/><YAxis tick={{fill:"#475569",fontSize:11}} domain={["auto","auto"]} axisLine={false} tickLine={false}/><Tooltip contentStyle={tooltipStyle}/><Line type="monotone" dataKey="val" stroke={T.violet} strokeWidth={2.5} dot={{fill:T.violet,r:5,strokeWidth:0}} name="Pas (cm)"/></LineChart></ResponsiveContainer></ChartCard>}
-          {wellnessData.length>=1&&(<ChartCard title="⚡ Wellbeing — Energia / Sen / Stres / Dieta" accent={T.emerald}><div style={{ display:"flex",gap:14,marginBottom:12,flexWrap:"wrap" }}>{[["Energia",T.amber],["Sen",T.emerald],["Stres",T.rose],["Dieta",T.cyan]].map(([n,c])=><div key={n} style={{ display:"flex",alignItems:"center",gap:6,fontSize:11,color:T.textMuted }}><div style={{ width:22,height:3,background:c,borderRadius:2 }}/>{n}</div>)}</div><ResponsiveContainer width="100%" height={190}><LineChart data={wellnessData}><CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)"/><XAxis dataKey="name" tick={{fill:"#475569",fontSize:11}} axisLine={false} tickLine={false}/><YAxis tick={{fill:"#475569",fontSize:11}} domain={[0,10]} axisLine={false} tickLine={false}/><Tooltip contentStyle={tooltipStyle}/><Line type="monotone" dataKey="Energia" stroke={T.amber} strokeWidth={2} dot={{r:4,fill:T.amber,strokeWidth:0}} connectNulls/><Line type="monotone" dataKey="Sen" stroke={T.emerald} strokeWidth={2} dot={{r:4,fill:T.emerald,strokeWidth:0}} connectNulls/><Line type="monotone" dataKey="Stres" stroke={T.rose} strokeWidth={2} dot={{r:4,fill:T.rose,strokeWidth:0}} connectNulls/><Line type="monotone" dataKey="Dieta" stroke={T.cyan} strokeWidth={2} dot={{r:4,fill:T.cyan,strokeWidth:0}} connectNulls/></LineChart></ResponsiveContainer></ChartCard>)}
-          {trainingData.length>=1&&<ChartCard title="🏋 Treningi — wykonane vs plan" accent={T.violet}><ResponsiveContainer width="100%" height={160}><BarChart data={trainingData} barCategoryGap="35%"><CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)"/><XAxis dataKey="name" tick={{fill:"#475569",fontSize:11}} axisLine={false} tickLine={false}/><YAxis tick={{fill:"#475569",fontSize:11}} axisLine={false} tickLine={false}/><Tooltip contentStyle={tooltipStyle}/><Bar dataKey="Plan" fill="rgba(167,139,250,0.15)" radius={[6,6,0,0]}/><Bar dataKey="Wykonane" fill={T.violet} radius={[6,6,0,0]}/></BarChart></ResponsiveContainer></ChartCard>}
+          {weightData.length>=1&&<ChartCard title="⚖️ Trend wagi (kg)" accent={T.cyan}><ResponsiveContainer width="100%" height={170}><LineChart data={weightData}><CartesianGrid strokeDasharray="3 3" stroke={gridStroke}/><XAxis dataKey="name" tick={tickStyle} axisLine={false} tickLine={false}/><YAxis tick={tickStyle} domain={["auto","auto"]} axisLine={false} tickLine={false}/><Tooltip contentStyle={tooltipStyle}/><Line type="monotone" dataKey="val" stroke={T.cyan} strokeWidth={2.5} dot={{fill:T.cyan,r:5,strokeWidth:0}} activeDot={{r:7,fill:T.cyan}} name="Waga (kg)"/></LineChart></ResponsiveContainer></ChartCard>}
+          {pasData.length>=1&&<ChartCard title="📏 Trend pasa (cm)" accent={T.violet}><ResponsiveContainer width="100%" height={150}><LineChart data={pasData}><CartesianGrid strokeDasharray="3 3" stroke={gridStroke}/><XAxis dataKey="name" tick={tickStyle} axisLine={false} tickLine={false}/><YAxis tick={tickStyle} domain={["auto","auto"]} axisLine={false} tickLine={false}/><Tooltip contentStyle={tooltipStyle}/><Line type="monotone" dataKey="val" stroke={T.violet} strokeWidth={2.5} dot={{fill:T.violet,r:5,strokeWidth:0}} name="Pas (cm)"/></LineChart></ResponsiveContainer></ChartCard>}
+          {wellnessData.length>=1&&(<ChartCard title="⚡ Wellbeing — Energia / Sen / Stres / Dieta" accent={T.emerald}><div style={{ display:"flex",gap:14,marginBottom:12,flexWrap:"wrap" }}>{[["Energia",T.amber],["Sen",T.emerald],["Stres",T.rose],["Dieta",T.cyan]].map(([n,c])=><div key={n} style={{ display:"flex",alignItems:"center",gap:6,fontSize:11,color:T.textMuted }}><div style={{ width:22,height:3,background:c,borderRadius:2 }}/>{n}</div>)}</div><ResponsiveContainer width="100%" height={190}><LineChart data={wellnessData}><CartesianGrid strokeDasharray="3 3" stroke={gridStroke}/><XAxis dataKey="name" tick={tickStyle} axisLine={false} tickLine={false}/><YAxis tick={tickStyle} domain={[0,10]} axisLine={false} tickLine={false}/><Tooltip contentStyle={tooltipStyle}/><Line type="monotone" dataKey="Energia" stroke={T.amber} strokeWidth={2} dot={{r:4,fill:T.amber,strokeWidth:0}} connectNulls/><Line type="monotone" dataKey="Sen" stroke={T.emerald} strokeWidth={2} dot={{r:4,fill:T.emerald,strokeWidth:0}} connectNulls/><Line type="monotone" dataKey="Stres" stroke={T.rose} strokeWidth={2} dot={{r:4,fill:T.rose,strokeWidth:0}} connectNulls/><Line type="monotone" dataKey="Dieta" stroke={T.cyan} strokeWidth={2} dot={{r:4,fill:T.cyan,strokeWidth:0}} connectNulls/></LineChart></ResponsiveContainer></ChartCard>)}
+          {trainingData.length>=1&&<ChartCard title="🏋 Treningi — wykonane vs plan" accent={T.violet}><ResponsiveContainer width="100%" height={160}><BarChart data={trainingData} barCategoryGap="35%"><CartesianGrid strokeDasharray="3 3" stroke={gridStroke}/><XAxis dataKey="name" tick={tickStyle} axisLine={false} tickLine={false}/><YAxis tick={tickStyle} axisLine={false} tickLine={false}/><Tooltip contentStyle={tooltipStyle}/><Bar dataKey="Plan" fill={T.bg==="#07090f"?"rgba(167,139,250,0.15)":"rgba(124,58,237,0.1)"} radius={[6,6,0,0]}/><Bar dataKey="Wykonane" fill={T.violet} radius={[6,6,0,0]}/></BarChart></ResponsiveContainer></ChartCard>}
         </div>
       )}
       {activeTab==="history"&&(
