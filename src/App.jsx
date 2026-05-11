@@ -565,13 +565,67 @@ function TrainerDashboard({ reports, onUpdateReports, comments, onUpdateComments
     </div>
   );
 }
+function LoginScreen({ onLogin }) {
+  const [login,setLogin] = useState("");
+  const [password,setPassword] = useState("");
+  const [error,setError] = useState(false);
+  const [shake,setShake] = useState(false);
+  const T = DARK_T;
+  const handleLogin = () => {
+    if (login.trim().toLowerCase() === "marcel" && password === "2026") {
+      onLogin();
+    } else {
+      setError(true);
+      setShake(true);
+      setTimeout(() => setShake(false), 500);
+    }
+  };
+  const handleKey = e => { if (e.key === "Enter") handleLogin(); };
+  return (
+    <div style={{ minHeight:"100vh", background:"#07090f", backgroundImage:"radial-gradient(ellipse 60% 40% at 50% 0%, rgba(0,212,255,0.07) 0%, transparent 70%)", display:"flex", alignItems:"center", justifyContent:"center", padding:"24px" }}>
+      <style>{CSS}{`@keyframes shake{0%,100%{transform:translateX(0)}20%,60%{transform:translateX(-8px)}40%,80%{transform:translateX(8px)}}.shake{animation:shake 0.4s ease}`}</style>
+      <div className={shake ? "shake" : ""} style={{ width:"100%", maxWidth:380, display:"flex", flexDirection:"column", gap:"1.25rem" }}>
+        <div style={{ marginBottom:"0.5rem" }}>
+          <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:6 }}>
+            <div style={{ width:28, height:28, borderRadius:8, background:"linear-gradient(135deg,#00d4ff,#a78bfa)", display:"flex", alignItems:"center", justifyContent:"center", fontSize:14 }}>⚡</div>
+            <div>
+              <div style={{ fontSize:14, fontWeight:800, color:"#f0f4f8", letterSpacing:"-0.02em", lineHeight:1 }}>Trust the Process</div>
+              <div style={{ fontSize:9, color:"rgba(148,163,184,0.5)", letterSpacing:"0.1em", textTransform:"uppercase" }}>Coaching Tracker v2.1</div>
+            </div>
+          </div>
+          <div style={{ fontSize:24, fontWeight:800, color:"#f0f4f8", letterSpacing:"-0.03em", marginTop:"1.25rem" }}>Zaloguj się</div>
+          <div style={{ fontSize:12, color:"rgba(148,163,184,0.5)", marginTop:4 }}>Wpisz dane dostępu aby kontynuować</div>
+        </div>
+        <div>
+          <label style={{ fontSize:10, color:"rgba(148,163,184,0.5)", textTransform:"uppercase", letterSpacing:"0.1em", fontWeight:700, display:"block", marginBottom:6 }}>Login</label>
+          <input value={login} onChange={e=>{setLogin(e.target.value);setError(false);}} onKeyDown={handleKey} placeholder="login" className={`fi${error?" err":""}`} autoComplete="username" />
+        </div>
+        <div>
+          <label style={{ fontSize:10, color:"rgba(148,163,184,0.5)", textTransform:"uppercase", letterSpacing:"0.1em", fontWeight:700, display:"block", marginBottom:6 }}>Hasło</label>
+          <input type="password" value={password} onChange={e=>{setPassword(e.target.value);setError(false);}} onKeyDown={handleKey} placeholder="••••••" className={`fi${error?" err":""}`} autoComplete="current-password" />
+        </div>
+        {error && <div style={{ fontSize:12, color:"#fb7185", fontWeight:600, textAlign:"center" }}>Nieprawidłowy login lub hasło</div>}
+        <button onClick={handleLogin} style={{ width:"100%", padding:"14px", background:"linear-gradient(135deg,rgba(0,212,255,0.15),rgba(167,139,250,0.15))", border:"1.5px solid rgba(0,212,255,0.3)", borderRadius:12, color:"#00d4ff", fontSize:14, fontWeight:800, cursor:"pointer", letterSpacing:"0.04em", transition:"all .18s ease" }}>
+          Wejdź →
+        </button>
+        <div style={{ textAlign:"center" }}>
+          <div style={{ fontSize:11, color:"rgba(148,163,184,0.25)" }}>Brak dostępu? Skontaktuj się z trenerem.</div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function App() {
+  const [loggedIn,setLoggedIn] = useState(false);
   const [view,setView] = useState("client");
   const [reports,setReports] = useState([]);
   const [comments,setComments] = useState({});
   const [isDark,setIsDark] = useState(false);
   const [loading,setLoading] = useState(true);
   const T = isDark ? DARK_T : LIGHT_T;
+
+  if (!loggedIn) return <LoginScreen onLogin={()=>setLoggedIn(true)} />;
   useEffect(() => {
     (async () => {
       const [savedReports, savedComments] = await Promise.all([storageGet(STORAGE_KEY),storageGet(COMMENTS_KEY)]);
