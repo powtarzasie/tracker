@@ -330,6 +330,8 @@ function ClientForm({ onSave, onExit }) {
     const errs = {};
     required.forEach(k => { if (!form[k] || String(form[k]).trim()==="") errs[k]=true; });
     if (form.bol==="TAK" && !form.bolMiejsce.trim()) errs.bolMiejsce=true;
+    if (form.dietaTrzymanie==="90-100%" && !form.bialko) errs.bialko=true;
+    if (form.dietaTrzymanie==="90-100%" && !form.kcal) errs.kcal=true;
     setErrors(errs); return Object.keys(errs).length===0;
   };
   const handleSubmit = async () => {
@@ -420,11 +422,17 @@ function ClientForm({ onSave, onExit }) {
             {[{val:"90-100%",label:"A – Clean",desc:"Ważyłem i mierzyłem wszystko",badge:"A",bColor:T.lime},{val:"60-80%",label:"B – Mixed",desc:"Ważyłem + szacowałem na oko",badge:"B",bColor:T.amber},{val:"<60%",label:"C – Dirty",desc:"Nie dbałem o tracking",badge:"C",bColor:T.rose}].map(o=>{ const active=form.dietaTrzymanie===o.val; return (<div key={o.val} onClick={()=>set("dietaTrzymanie",o.val)} style={{ padding:"11px 14px",borderRadius:12,cursor:"pointer",display:"flex",alignItems:"center",gap:12,transition:"all .15s",background:active?`${T.cyan}14`:T.surface,border:`1.5px solid ${active?T.cyan+"59":errors.dietaTrzymanie?T.rose+"59":T.border}` }}><div style={{ width:28,height:28,borderRadius:8,flexShrink:0,background:active?`${o.bColor}22`:T.surface,border:`1.5px solid ${active?o.bColor:"transparent"}`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,fontWeight:800,color:active?o.bColor:T.textMuted }}>{o.badge}</div><div><div style={{ fontSize:14,fontWeight:700,color:active?T.cyan:T.text }}>{o.label}</div><div style={{ fontSize:11,color:T.textMuted,marginTop:2 }}>{o.desc}</div></div></div>); })}
           </div>
         </Field>
-        <Field label="Białko (g/kg masy ciała)"><input type="number" min="0" max="5" step="0.1" placeholder="np. 2.0" value={form.bialko} onChange={e=>set("bialko",e.target.value)} className="fi" /></Field>
-        <Row2>
-          <Field label="Kcal"><input type="number" min="0" max="10000" step="50" placeholder="np. 3200" value={form.kcal} onChange={e=>set("kcal",e.target.value)} className="fi" /></Field>
-          <Field label="Kreatyna (g)"><input type="number" min="0" max="50" step="0.5" placeholder="np. 5" value={form.kreatyna} onChange={e=>set("kreatyna",e.target.value)} className="fi" /></Field>
-        </Row2>
+        <Field label="Kreatyna (g)"><input type="number" min="0" max="50" step="0.5" placeholder="np. 5" value={form.kreatyna} onChange={e=>set("kreatyna",e.target.value)} className="fi" /></Field>
+        <div style={{ overflow:"hidden", maxHeight:form.dietaTrzymanie==="<60%"||!form.dietaTrzymanie?"0px":"200px", opacity:form.dietaTrzymanie==="<60%"||!form.dietaTrzymanie?0:1, marginTop:form.dietaTrzymanie==="<60%"||!form.dietaTrzymanie?0:12, transition:"max-height .35s cubic-bezier(.4,0,.2,1), opacity .25s ease, margin-top .35s" }}>
+          <Field label={<span>Białko (g/kg){form.dietaTrzymanie==="90-100%"&&<span style={{marginLeft:8,fontSize:10,fontWeight:700,padding:"2px 8px",borderRadius:100,background:`${T.cyan}18`,color:T.cyan}}>wymagane</span>}{form.dietaTrzymanie==="60-80%"&&<span style={{marginLeft:8,fontSize:10,fontWeight:700,padding:"2px 8px",borderRadius:100,background:"rgba(148,163,184,0.1)",color:T.textMuted}}>opcjonalne</span>}</span>}>
+            <input type="number" min="0" max="5" step="0.1" placeholder={form.dietaTrzymanie==="60-80%"?"Szacunkowo... np. 1.8":"np. 2.0"} value={form.bialko} onChange={e=>set("bialko",e.target.value)} className={`fi${errors.bialko?" err":""}`} />
+          </Field>
+        </div>
+        <div style={{ overflow:"hidden", maxHeight:form.dietaTrzymanie==="90-100%"?"120px":"0px", opacity:form.dietaTrzymanie==="90-100%"?1:0, marginTop:form.dietaTrzymanie==="90-100%"?12:0, transition:"max-height .35s cubic-bezier(.4,0,.2,1), opacity .25s ease, margin-top .35s" }}>
+          <Field label={<span>Kcal<span style={{marginLeft:8,fontSize:10,fontWeight:700,padding:"2px 8px",borderRadius:100,background:`${T.cyan}18`,color:T.cyan}}>wymagane</span></span>}>
+            <input type="number" min="0" max="10000" step="50" placeholder="np. 3200" value={form.kcal} onChange={e=>set("kcal",e.target.value)} className={`fi${errors.kcal?" err":""}`} />
+          </Field>
+        </div>
       </StepCard>
       <StepCard num="6" icon="💬" title="Feedback dla trenera" color={T.violet}>
         <Field label="Progres siłowy"><textarea rows={2} placeholder="np. bench +2.5kg, squaty bez zmian" value={form.progres} onChange={e=>set("progres",e.target.value)} className="fi" style={{ resize:"vertical",lineHeight:1.6 }} /></Field>
