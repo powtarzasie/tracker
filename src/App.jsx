@@ -185,7 +185,7 @@ function EmojiSelect({ value, onChange, options, hasError }) {
     <div style={{ display:"flex",gap:6,padding:hasError?8:0,borderRadius:10,border:hasError?`1.5px solid ${T.rose}66`:"none",background:hasError?`${T.rose}0d`:"transparent" }}>
       {options.map(o => {
         const active = value===o.val;
-        return <button key={o.val} onClick={()=>onChange(o.val)} style={{ flex:1,height:52,borderRadius:14,border:"none",cursor:"pointer",fontSize:24,display:"flex",alignItems:"center",justifyContent:"center",background:active?`${T.cyan}20`:T.surface,outline:active?`2px solid ${T.cyan}99`:"2px solid transparent",transform:active?"scale(1.12)":"scale(1)",transition:"all .15s cubic-bezier(.34,1.56,.64,1)",filter:active?"none":"grayscale(30%)" }}>{o.emoji}</button>;
+        return <button key={o.val} onClick={()=>onChange(o.val)} style={{ flex:1,height:52,borderRadius:14,border:`2px solid ${active?T.cyan+"99":T.borderBright}`,cursor:"pointer",fontSize:24,display:"flex",alignItems:"center",justifyContent:"center",background:active?`${T.cyan}20`:T.surface,transform:active?"scale(1.12)":"scale(1)",transition:"all .15s cubic-bezier(.34,1.56,.64,1)",filter:active?"none":"grayscale(30%)" }}>{o.emoji}</button>;
       })}
     </div>
   );
