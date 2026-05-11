@@ -625,7 +625,6 @@ export default function App() {
   const [loading,setLoading] = useState(true);
   const T = isDark ? DARK_T : LIGHT_T;
 
-  if (!loggedIn) return <LoginScreen onLogin={()=>setLoggedIn(true)} />;
   useEffect(() => {
     (async () => {
       const [savedReports, savedComments] = await Promise.all([storageGet(STORAGE_KEY),storageGet(COMMENTS_KEY)]);
@@ -637,6 +636,8 @@ export default function App() {
   const handleNewReport = useCallback((report) => { setReports(prev => { const updated = [...prev.filter(r => r.id !== report.id), report]; return updated.sort((a,b) => new Date(a.data) - new Date(b.data)); }); }, []);
   const handleUpdateReports = useCallback(async (newReports) => { const sorted = [...newReports].sort((a,b)=>new Date(a.data)-new Date(b.data)); setReports(sorted); await storageSet(STORAGE_KEY, sorted); }, []);
   const handleUpdateComments = useCallback(async (newComments) => { setComments(newComments); await storageSet(COMMENTS_KEY, newComments); }, []);
+
+  if (!loggedIn) return <LoginScreen onLogin={()=>setLoggedIn(true)} />;
   if (!SB_URL || !SB_KEY) return (
     <ThemeCtx.Provider value={isDark}>
       <div style={{ minHeight:"100vh",background:T.bg,display:"flex",alignItems:"center",justifyContent:"center",padding:24 }}>
