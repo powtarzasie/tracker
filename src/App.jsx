@@ -569,7 +569,7 @@ export default function App() {
   const [view,setView] = useState("client");
   const [reports,setReports] = useState([]);
   const [comments,setComments] = useState({});
-  const [isDark,setIsDark] = useState(true);
+  const [isDark,setIsDark] = useState(false);
   const [loading,setLoading] = useState(true);
   const T = isDark ? DARK_T : LIGHT_T;
   useEffect(() => {
