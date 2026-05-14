@@ -566,34 +566,79 @@ function TrainerDashboard({ reports, onUpdateReports, comments, onUpdateComments
           <div style={{ background:T.surface,border:`1.5px solid ${T.border}`,borderRadius:18,padding:"18px 20px" }}>
             {[...sorted].reverse().map((r,i,arr)=>(
               <div key={r.id} style={{ borderBottom:i<arr.length-1?`1px solid ${T.border}`:"none",paddingBottom:18,marginBottom:18 }}>
-                <div style={{ display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8,flexWrap:"wrap",gap:6 }}>
-                  <span style={{ fontWeight:800,fontSize:16,color:T.text,fontFamily:"'JetBrains Mono',monospace" }}>{weekRange(r.data)}</span>
-                  <div style={{ display:"flex",gap:6,alignItems:"center",flexWrap:"wrap" }}>
-                    {r.zdjecia==="TAK"&&<span style={{ fontSize:10,color:T.emerald,background:"rgba(52,211,153,0.1)",padding:"3px 10px",borderRadius:100,fontWeight:700,border:"1px solid rgba(52,211,153,0.2)" }}>📸 foto</span>}
-                    {r.bol==="TAK"&&<span style={{ fontSize:10,color:"#fca5a5",background:"rgba(251,113,133,0.1)",padding:"3px 10px",borderRadius:100,fontWeight:700,border:"1px solid rgba(251,113,133,0.2)" }}>⚠️ ból</span>}
+                {r.bol==="TAK"&&<div style={{ display:"flex",alignItems:"center",gap:6,fontSize:11,fontWeight:700,color:T.rose,background:`${T.rose}14`,border:`0.5px solid ${T.rose}44`,borderRadius:8,padding:"5px 10px",marginBottom:8 }}>⚠️ ból — {r.bolMiejsce||"zgłoszony"}</div>}
+                <div style={{ display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10,gap:8 }}>
+                  <span style={{ fontWeight:800,fontSize:16,color:T.text,fontFamily:"'JetBrains Mono',monospace",flexShrink:0 }}>{weekRange(r.data)}</span>
+                  <div style={{ display:"flex",gap:6,alignItems:"center" }}>
+                    {/* foto badge — zawsze widoczny */}
+                    <span style={{ fontSize:10,fontWeight:700,padding:"3px 0",width:64,textAlign:"center",borderRadius:6,
+                      background:r.zdjecia==="TAK"?`${T.emerald}18`:"transparent",
+                      color:r.zdjecia==="TAK"?T.emerald:T.textMuted,
+                      border:r.zdjecia==="TAK"?`0.5px solid ${T.emerald}44`:`0.5px dashed ${T.border}`,
+                      opacity:r.zdjecia==="TAK"?1:0.45 }}>📷 foto</span>
+                    {/* dieta badge — zawsze widoczny */}
+                    {(()=>{
+                      const d = r.dietaTrzymanie;
+                      const isClean = d==="90-100%", isMix = d==="60-80%", isDirty = d==="<60%";
+                      const col = isClean?T.emerald:isMix?T.amber:isDirty?T.rose:T.textMuted;
+                      const lbl = isClean?"🥗 Clean":isMix?"🥗 Mix":isDirty?"🥗 Dirty":"🥗 —";
+                      const hasDiet = isClean||isMix||isDirty;
+                      return <span style={{ fontSize:10,fontWeight:700,padding:"3px 0",width:64,textAlign:"center",borderRadius:6,
+                        background:hasDiet?`${col}18`:"transparent",
+                        color:hasDiet?col:T.textMuted,
+                        border:hasDiet?`0.5px solid ${col}44`:`0.5px dashed ${T.border}`,
+                        opacity:hasDiet?1:0.45 }}>{lbl}</span>;
+                    })()}
                     {deleteConfirm!==r.id&&<button onClick={()=>{ setDeleteConfirm(r.id); setDeleteConfirm2(null); }} style={{ fontSize:11,padding:"4px 10px",borderRadius:100,border:`1.5px solid ${T.border}`,background:"transparent",color:T.textMuted,cursor:"pointer",fontWeight:600 }}>🗑</button>}
-                    {deleteConfirm===r.id&&deleteConfirm2!==r.id&&(<div style={{ display:"flex",alignItems:"center",gap:6 }}><span style={{ fontSize:11,color:T.rose,fontWeight:700 }}>Usunąć?</span><button onClick={()=>setDeleteConfirm2(r.id)} style={{ fontSize:11,padding:"5px 12px",borderRadius:100,border:"none",background:"rgba(251,113,133,0.15)",color:T.rose,cursor:"pointer",fontWeight:700 }}>Tak</button><button onClick={()=>setDeleteConfirm(null)} style={{ fontSize:11,padding:"5px 12px",borderRadius:100,border:"1.5px solid rgba(255,255,255,0.1)",background:"transparent",color:T.textMuted,cursor:"pointer",fontWeight:600 }}>Nie</button></div>)}
-                    {deleteConfirm2===r.id&&(<div style={{ display:"flex",alignItems:"center",gap:6 }}><span style={{ fontSize:11,color:T.rose,fontWeight:800 }}>Na pewno?</span><button onClick={()=>deleteReport(r.id)} style={{ fontSize:11,padding:"5px 14px",borderRadius:100,border:"none",background:T.rose,color:"#fff",cursor:"pointer",fontWeight:800 }}>Usuń</button><button onClick={()=>{ setDeleteConfirm(null); setDeleteConfirm2(null); }} style={{ fontSize:11,padding:"5px 12px",borderRadius:100,border:"1.5px solid rgba(255,255,255,0.1)",background:"transparent",color:T.textMuted,cursor:"pointer",fontWeight:600 }}>Anuluj</button></div>)}
+                    {deleteConfirm===r.id&&deleteConfirm2!==r.id&&(<div style={{ display:"flex",alignItems:"center",gap:6 }}><span style={{ fontSize:11,color:T.rose,fontWeight:700 }}>Usunąć?</span><button onClick={()=>setDeleteConfirm2(r.id)} style={{ fontSize:11,padding:"5px 12px",borderRadius:100,border:"none",background:"rgba(251,113,133,0.15)",color:T.rose,cursor:"pointer",fontWeight:700 }}>Tak</button><button onClick={()=>setDeleteConfirm(null)} style={{ fontSize:11,padding:"5px 12px",borderRadius:100,border:`1.5px solid ${T.border}`,background:"transparent",color:T.textMuted,cursor:"pointer",fontWeight:600 }}>Nie</button></div>)}
+                    {deleteConfirm2===r.id&&(<div style={{ display:"flex",alignItems:"center",gap:6 }}><span style={{ fontSize:11,color:T.rose,fontWeight:800 }}>Na pewno?</span><button onClick={()=>deleteReport(r.id)} style={{ fontSize:11,padding:"5px 14px",borderRadius:100,border:"none",background:T.rose,color:"#fff",cursor:"pointer",fontWeight:800 }}>Usuń</button><button onClick={()=>{ setDeleteConfirm(null); setDeleteConfirm2(null); }} style={{ fontSize:11,padding:"5px 12px",borderRadius:100,border:`1.5px solid ${T.border}`,background:"transparent",color:T.textMuted,cursor:"pointer",fontWeight:600 }}>Anuluj</button></div>)}
                   </div>
                 </div>
-                <div style={{ display:"flex",gap:7,flexWrap:"wrap",fontSize:12,color:T.textMuted }}>
-                  {(r.sredniaTygodnia||r.waga)&&<MetaPill icon="⚖️" val={`${r.sredniaTygodnia||r.waga} kg`}/>}
-                  {r.pas&&<MetaPill icon="📏" val={`${r.pas} cm`}/>}
-                  {r.treningiWykonane&&<MetaPill icon="🏋" val={`${r.treningiWykonane}/${r.treningiPlan}`}/>}
-                  {r.sen&&<MetaPill icon="😴" val={`${r.sen}h`}/>}
-                  {r.energia&&<MetaPill icon="⚡" val={displayEnergia(r.energia)} color={scoreColor(parseInt(r.energia))}/>}
-                  {r.stres&&<MetaPill icon="😤" val={`S:${r.stres}`}/>}
-                  {r.bialko&&(()=>{ const v=parseFloat(r.bialko); return <MetaPill icon="🥩" val={`${r.bialko} g/kg`} color={proteinColor(isNaN(v)?null:v,T)}/>; })()}
-                  {r.kreatyna&&<MetaPill icon="💊" val={`K:${r.kreatyna}g`}/>}
-                  {r.zarwanaNoc==="TAK"&&<MetaPill icon="🌙" val="Zarwana noc" color={T.rose}/>}
+                {/* Siatka pigułek — zawsze 8, puste wyszarzone */}
+                <div style={{ display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:6,marginBottom:10 }}>
+                  {(()=>{
+                    const weight = r.sredniaTygodnia||r.waga;
+                    const pas = r.pas&&r.pas!=="brak info"?r.pas:null;
+                    const trening = r.treningiWykonane?`${r.treningiWykonane}/${r.treningiPlan}`:null;
+                    const sen = r.sen;
+                    const energia = r.energia;
+                    const stres = r.stres;
+                    const bialko = r.bialko&&r.bialko!=="brak info"?r.bialko:null;
+                    const kreatyna = r.kreatyna&&r.kreatyna!=="brak info"?r.kreatyna:null;
+                    const pillStyle = { display:"flex",alignItems:"center",justifyContent:"center",gap:4,padding:"5px 6px",borderRadius:100,fontSize:11,border:`0.5px solid ${T.border}`,background:T.surface,color:T.textSub,whiteSpace:"nowrap" };
+                    const emptyStyle = { display:"flex",alignItems:"center",justifyContent:"center",gap:4,padding:"5px 6px",borderRadius:100,fontSize:11,border:`0.5px dashed ${T.border}`,background:"transparent",color:T.textMuted,whiteSpace:"nowrap",opacity:0.45 };
+                    return (<>
+                      {weight?<span style={pillStyle}>⚖️ {weight} kg</span>:<span style={emptyStyle}>⚖️ —</span>}
+                      {pas?<span style={pillStyle}>📏 {pas} cm</span>:<span style={emptyStyle}>📏 —</span>}
+                      {trening?<span style={pillStyle}>🏋 {trening}</span>:<span style={emptyStyle}>🏋 —</span>}
+                      {sen?<span style={pillStyle}>😴 {sen}h</span>:<span style={emptyStyle}>😴 —</span>}
+                      {energia?<span style={{...pillStyle,color:scoreColor(parseInt(energia))}}>{displayEnergia(energia)}</span>:<span style={emptyStyle}>⚡ —</span>}
+                      {stres?<span style={pillStyle}>😤 S:{stres}</span>:<span style={emptyStyle}>😤 —</span>}
+                      {bialko?<span style={{...pillStyle,color:proteinColor(parseFloat(bialko),T)}}>🥩 {bialko} g/kg</span>:<span style={emptyStyle}>🥩 —</span>}
+                      {kreatyna?<span style={pillStyle}>💊 K:{kreatyna}g</span>:<span style={emptyStyle}>💊 —</span>}
+                    </>);
+                  })()}
                 </div>
-                {(r.progres||r.zgloszenie)&&<div style={{ marginTop:8,fontSize:12,color:T.textMuted,lineHeight:1.6 }}>{r.progres&&<div style={{ marginBottom:2 }}>💪 {r.progres}</div>}{r.zgloszenie&&<div>📝 {r.zgloszenie}</div>}</div>}
-                <div style={{ marginTop:12 }}>
+                {/* Feedback klienta — zawsze 4 pola */}
+                <div style={{ background:T.surface,border:`0.5px solid ${T.border}`,borderRadius:10,padding:"10px 12px",marginBottom:10 }}>
+                  <div style={{ fontSize:9,fontWeight:700,color:T.cyan,textTransform:"uppercase",letterSpacing:"0.1em",marginBottom:8 }}>Feedback klienta</div>
+                  {[["progres","💪 Progres"],["odczucieTreningu","🏋 Odczucie"],["dietaOpis","🥗 Dieta"],["zgloszenie","📝 Zgłoszenie"]].map(([k,lbl],idx,all)=>{
+                    const val = r[k];
+                    const isLast = idx===all.length-1;
+                    return (
+                      <div key={k} style={{ paddingTop:6,paddingBottom:isLast?0:6,borderBottom:isLast?"none":`0.5px solid ${T.border}` }}>
+                        <div style={{ fontSize:9,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.08em",marginBottom:2,color:val?T.textMuted:T.textMuted,opacity:val?1:0.5 }}>{lbl}</div>
+                        <div style={{ fontSize:12,lineHeight:1.55,color:val?T.text:T.textMuted,opacity:val?1:0.4 }}>{val||"— nie wypełniono"}</div>
+                      </div>
+                    );
+                  })}
+                </div>
+                <div style={{ marginTop:4 }}>
                   {savedCmtId===r.id&&<div style={{ fontSize:11,color:T.emerald,marginBottom:8 }}>✅ Komentarz zapisany w bazie</div>}
                   {comments[r.id]&&editingId!==r.id ? (
                     <div style={{ background:"rgba(167,139,250,0.07)",border:"1.5px solid rgba(167,139,250,0.2)",borderRadius:12,padding:"12px 14px" }}>
                       <div style={{ fontSize:10,color:T.violet,textTransform:"uppercase",letterSpacing:"0.1em",fontWeight:700,marginBottom:6 }}>Komentarz trenera</div>
-                      <div style={{ fontSize:13,color:"#cbd5e1",lineHeight:1.7 }}>{comments[r.id]}</div>
+                      <div style={{ fontSize:13,color:T.text,lineHeight:1.7 }}>{comments[r.id]}</div>
                       <div style={{ display:"flex",gap:8,marginTop:10 }}>
                         <button onClick={()=>{ setEditingId(r.id); setDraftComment(comments[r.id]); }} style={{ fontSize:11,padding:"5px 14px",borderRadius:100,border:"1.5px solid rgba(167,139,250,0.3)",background:"transparent",color:T.violet,cursor:"pointer",fontWeight:600 }}>✏️ Edytuj</button>
                         <button onClick={()=>delComment(r.id)} style={{ fontSize:11,padding:"5px 14px",borderRadius:100,border:"1.5px solid rgba(251,113,133,0.25)",background:"transparent",color:T.rose,cursor:"pointer",fontWeight:600 }}>🗑 Usuń</button>
