@@ -1,8 +1,13 @@
 import { useState, useEffect, useCallback, createContext, useContext } from "react";
+import emailjs from "@emailjs/browser";
 import {
   LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, RadarChart, Radar, PolarGrid, PolarAngleAxis,
 } from "recharts";
+
+const EMAILJS_SERVICE_ID  = "service_waepieg";
+const EMAILJS_TEMPLATE_ID = "template_llqsrma";
+const EMAILJS_PUBLIC_KEY  = "29sTJ6oyeV1NH7r3W";
 /* === SUPABASE CONFIG ===
    Utwórz darmowe konto na supabase.com, a następnie wklej w Vercel:
      Settings → Environment Variables:
@@ -350,6 +355,38 @@ function ClientForm({ onSave, onExit }) {
     const updated  = [...existing.filter(r => r.id !== report.id), report];
     const ok = await storageSet(STORAGE_KEY, updated);
     setStorageOk(ok===true);
+    try {
+      await emailjs.send(
+        EMAILJS_SERVICE_ID,
+        EMAILJS_TEMPLATE_ID,
+        {
+          data:              report.data,
+          sredniaTygodnia:   report.sredniaTygodnia,
+          pas:               report.pas,
+          treningiWykonane:  report.treningiWykonane,
+          treningiPlan:      report.treningiPlan,
+          sila:              report.sila || "—",
+          sen:               report.sen,
+          senJakosc:         report.senJakosc,
+          zarwanaNoc:        report.zarwanaNoc || "NIE",
+          dietaTrzymanie:    report.dietaTrzymanie,
+          bialko:            report.bialko,
+          kcal:              report.kcal,
+          kreatyna:          report.kreatyna,
+          energia:           report.energia,
+          stres:             report.stres,
+          bol:               report.bol || "NIE",
+          bolMiejsce:        report.bolMiejsce || "—",
+          progres:           report.progres || "—",
+          odczucieTreningu:  report.odczucieTreningu || "—",
+          dietaOpis:         report.dietaOpis || "—",
+          zgloszenie:        report.zgloszenie || "—",
+        },
+        EMAILJS_PUBLIC_KEY
+      );
+    } catch (e) {
+      console.error("EmailJS error:", e);
+    }
     if (onSave) onSave(report);
     const p = form.data.split("-");
     setSavedDate(`${p[2]}.${p[1]}.${p[0]}`);
