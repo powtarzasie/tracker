@@ -5,9 +5,11 @@ import {
   ResponsiveContainer, RadarChart, Radar, PolarGrid, PolarAngleAxis,
 } from "recharts";
 
-const EMAILJS_SERVICE_ID  = "service_waepieg";
-const EMAILJS_TEMPLATE_ID = "template_llqsrma";
-const EMAILJS_PUBLIC_KEY  = "29sTJ6oyeV1NH7r3W";
+const EMAILJS_SERVICE_ID          = "service_waepieg";
+const EMAILJS_TEMPLATE_ID         = "template_llqsrma";
+const EMAILJS_TEMPLATE_COMMENT_ID = "template_fn72tzf";
+const EMAILJS_PUBLIC_KEY          = "29sTJ6oyeV1NH7r3W";
+const CLIENT_EMAIL                = "mgasiorowskikontakt@gmail.com";
 /* === SUPABASE CONFIG ===
    Utwórz darmowe konto na supabase.com, a następnie wklej w Vercel:
      Settings → Environment Variables:
@@ -508,7 +510,55 @@ function TrainerDashboard({ reports, onUpdateReports, comments, onUpdateComments
   const [deleteConfirm2,setDeleteConfirm2] = useState(null);
   const clearAll = useCallback(async () => { await onUpdateReports([]); setClearConfirm(false); setClearConfirm2(false); }, [onUpdateReports]);
   const deleteReport = useCallback(async id => { const filtered = reports.filter(r=>r.id!==id); await onUpdateReports(filtered); const upd = { ...comments }; delete upd[id]; await onUpdateComments(upd); setDeleteConfirm(null); setDeleteConfirm2(null); }, [reports, comments, onUpdateReports, onUpdateComments]);
-  const saveComment = useCallback(async id => { if (!draftComment.trim()) return; setSavingCmt(true); const upd = { ...comments, [id]: draftComment }; await onUpdateComments(upd); setEditingId(null); setDraftComment(""); setSavedCmtId(id); setTimeout(()=>setSavedCmtId(null),3000); setSavingCmt(false); }, [draftComment, comments, onUpdateComments]);
+  const saveComment = useCallback(async id => {
+    if (!draftComment.trim()) return;
+    setSavingCmt(true);
+    const upd = { ...comments, [id]: draftComment };
+    await onUpdateComments(upd);
+    try {
+      const rep = reports.find(r => r.id === id);
+      const dateParts = rep?.data?.split("-") || [];
+      const dateFormatted = dateParts.length===3 ? `${dateParts[2]}.${dateParts[1]}.${dateParts[0]}` : (rep?.data || "—");
+      await emailjs.send(
+        EMAILJS_SERVICE_ID,
+        EMAILJS_TEMPLATE_COMMENT_ID,
+        {
+          to_email:          CLIENT_EMAIL,
+          data:              dateFormatted,
+          comment:           draftComment,
+          waga:              rep?.sredniaTygodnia || rep?.waga || "—",
+          pas:               rep?.pas             || "—",
+          zdjecia:           rep?.zdjecia         || "—",
+          treningiWykonane:  rep?.treningiWykonane || "—",
+          treningiPlan:      rep?.treningiPlan     || "—",
+          sila:              rep?.sila             || "—",
+          sen:               rep?.sen              || "—",
+          senJakosc:         rep?.senJakosc        || "—",
+          zarwanaNoc:        rep?.zarwanaNoc       || "NIE",
+          dietaTrzymanie:    rep?.dietaTrzymanie   || "—",
+          bialko:            rep?.bialko           || "—",
+          kcal:              rep?.kcal             || "—",
+          kreatyna:          rep?.kreatyna         || "—",
+          energia:           rep?.energia          || "—",
+          stres:             rep?.stres            || "—",
+          bol:               rep?.bol              || "NIE",
+          bolMiejsce:        rep?.bolMiejsce       || "—",
+          progres:           rep?.progres          || "—",
+          odczucieTreningu:  rep?.odczucieTreningu || "—",
+          dietaOpis:         rep?.dietaOpis        || "—",
+          zgloszenie:        rep?.zgloszenie       || "—",
+        },
+        EMAILJS_PUBLIC_KEY
+      );
+    } catch (e) {
+      console.error("EmailJS comment error:", e);
+    }
+    setEditingId(null);
+    setDraftComment("");
+    setSavedCmtId(id);
+    setTimeout(()=>setSavedCmtId(null), 3000);
+    setSavingCmt(false);
+  }, [draftComment, comments, onUpdateComments, reports]);
   const delComment = useCallback(async id => { const upd = { ...comments }; delete upd[id]; await onUpdateComments(upd); }, [comments, onUpdateComments]);
   const tooltipStyle = { background:T.bg==="#07090f"?"#0b0e18":"#ffffff",border:`1.5px solid ${T.border}`,borderRadius:10,color:T.text,fontSize:12,boxShadow:"0 8px 32px rgba(0,0,0,0.18)" };
   const gridStroke = T.bg==="#07090f"?"rgba(255,255,255,0.06)":"rgba(0,0,0,0.08)";
