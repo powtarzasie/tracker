@@ -751,6 +751,31 @@ function TrainerDashboard({ reports, onUpdateReports, comments, onUpdateComments
       const rep = reports.find(r => r.id === id);
       const dateParts = rep?.data?.split("-") || [];
       const dateFormatted = dateParts.length===3 ? `${dateParts[2]}.${dateParts[1]}.${dateParts[0]}` : (rep?.data || "—");
+      // Wykres radarowy — znajdź poprzedni raport
+      const sortedAll = [...reports].sort((a,b) => new Date(a.data)-new Date(b.data));
+      const repIdx = sortedAll.findIndex(r => r.id === id);
+      const prevRep = repIdx > 0 ? sortedAll[repIdx - 1] : null;
+      const radarVals = r => r ? [
+        parseInt(r.energia) || 0,
+        parseInt(r.senJakosc) || 0,
+        Math.max(0, 10 - (parseInt(r.stres) || 0)),
+        parseDieta(r.dietaTrzymanie) ?? 0,
+        r.treningiPlan ? Math.min(10, Math.round((parseInt(r.treningiWykonane)/parseInt(r.treningiPlan))*10)) : 0,
+      ] : null;
+      const currVals = radarVals(rep);
+      const prevVals = radarVals(prevRep);
+      const chartConfig = {
+        type: "radar",
+        data: {
+          labels: ["Energia","Jakość snu","Brak stresu","Dieta","Trening"],
+          datasets: [
+            ...(prevVals ? [{label:"Poprzedni tydzień",data:prevVals,borderColor:"#818cf8",backgroundColor:"rgba(129,140,248,0.15)",pointBackgroundColor:"#818cf8",borderDash:[5,3],borderWidth:2}] : []),
+            {label:"Ostatni tydzień",data:currVals,borderColor:"#f97316",backgroundColor:"rgba(249,115,22,0.2)",pointBackgroundColor:"#f97316",borderWidth:2},
+          ],
+        },
+        options: { scale: { ticks: { beginAtZero: true, max: 10, stepSize: 2 } } },
+      };
+      const radarChartUrl = `https://quickchart.io/chart?w=500&h=380&bkg=white&c=${encodeURIComponent(JSON.stringify(chartConfig))}`;
       await emailjs.send(
         EMAILJS_SERVICE_ID,
         EMAILJS_TEMPLATE_COMMENT_ID,
@@ -758,6 +783,7 @@ function TrainerDashboard({ reports, onUpdateReports, comments, onUpdateComments
           to_email:          CLIENT_EMAIL,
           data:              dateFormatted,
           comment:           draftComment,
+          radarChartUrl:     radarChartUrl,
           waga:              rep?.sredniaTygodnia || rep?.waga || "—",
           pas:               rep?.pas             || "—",
           zdjecia:           rep?.zdjecia         || "—",
