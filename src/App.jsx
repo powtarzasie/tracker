@@ -136,6 +136,34 @@ const QUOTES = [
 const ThemeCtx = createContext(true);
 const useT = () => { const dark = useContext(ThemeCtx); return dark ? DARK_T : LIGHT_T; };
 const CSS = `@import url('https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,700;12..96,800&family=JetBrains+Mono:wght@400;600&display=swap'); *{box-sizing:border-box;margin:0;padding:0;} body{font-family:'Bricolage Grotesque',sans-serif;} input,textarea,button,select{font-family:'Bricolage Grotesque',sans-serif;} input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;} input[type=date]::-webkit-calendar-picker-indicator{filter:invert(0.4);} ::-webkit-scrollbar{width:4px;} ::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.1);border-radius:4px;} .fi{background:rgba(255,255,255,0.055);border:1.5px solid rgba(255,255,255,0.1);border-radius:12px;color:#f0f4f8;padding:12px 16px;font-size:15px;width:100%;outline:none;transition:border-color .18s,box-shadow .18s;} .fi:focus{border-color:rgba(0,212,255,0.6);box-shadow:0 0 0 3px rgba(0,212,255,0.1);} .fi::placeholder{color:rgba(148,163,184,0.4);} .fi.err{background:rgba(251,113,133,0.07);border-color:rgba(251,113,133,0.5);} textarea.fi{resize:vertical;line-height:1.6;} .light .fi{background:#f8fafc;border:1.5px solid rgba(0,0,0,0.12);color:#0f172a;} .light .fi:focus{border-color:rgba(8,145,178,0.6);box-shadow:0 0 0 3px rgba(8,145,178,0.1);} .light .fi::placeholder{color:rgba(100,116,139,0.5);} .light .fi.err{background:rgba(225,29,72,0.05);border-color:rgba(225,29,72,0.4);} .light input[type=date]::-webkit-calendar-picker-indicator{filter:none;} .light ::-webkit-scrollbar-thumb{background:rgba(0,0,0,0.15);} .tab-pill{padding:8px 20px;border-radius:100px;border:none;cursor:pointer;font-size:12px;font-weight:700;letter-spacing:.05em;transition:all .18s;} .tab-pill.on{background:#00d4ff;color:#07090f;box-shadow:0 0 18px rgba(0,212,255,0.3);} .tab-pill.off{background:rgba(255,255,255,0.06);color:#4b5968;} .tab-pill.off:hover{background:rgba(255,255,255,0.1);color:#64748b;} .light .tab-pill.on{background:#0891b2;color:#fff;} .light .tab-pill.off{background:rgba(0,0,0,0.06);color:#94a3b8;} .light .tab-pill.off:hover{background:rgba(0,0,0,0.1);color:#64748b;} .sc{background:rgba(255,255,255,0.04);border:1.5px solid rgba(255,255,255,0.08);border-radius:14px;padding:10px 8px;text-align:center;transition:border-color .18s,background .18s;aspect-ratio:1/1;display:flex;flex-direction:column;align-items:center;justify-content:center;overflow:hidden;gap:0;} .sc:hover{border-color:rgba(255,255,255,0.16);background:rgba(255,255,255,0.06);} .light .sc{background:#f8fafc;border:1.5px solid rgba(0,0,0,0.08);} .light .sc:hover{border-color:rgba(0,0,0,0.16);background:#f1f5f9;} .comment-ghost{font-size:12px;padding:6px 16px;border-radius:100px;border:1.5px dashed rgba(167,139,250,0.3);background:transparent;color:#4b5968;cursor:pointer;transition:all .18s;font-weight:600;} .comment-ghost:hover{border-color:rgba(167,139,250,0.6);color:#a78bfa;} .light .comment-ghost{color:#94a3b8;} @keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}} .fade-up{animation:fadeUp .3s ease both;} @keyframes successPop{0%{transform:scale(.92);opacity:0}60%{transform:scale(1.03)}100%{transform:scale(1);opacity:1}} .success-pop{animation:successPop .45s cubic-bezier(.34,1.4,.64,1) both;} @keyframes shimmer{0%,100%{opacity:1}50%{opacity:.6}} .shimmer{animation:shimmer 2s ease infinite;} .delta{display:inline-flex;align-items:center;gap:3px;font-size:11px;font-weight:700;padding:2px 7px;border-radius:100px;} .delta.up{background:rgba(163,230,53,0.15);color:#a3e635;} .delta.down{background:rgba(251,113,133,0.15);color:#fb7185;} .delta.same{background:rgba(148,163,184,0.1);color:#64748b;}`;
+/* === MARKDOWN RENDERER === */
+function renderInline(text) {
+  const parts = text.split(/(\*\*[^*]+\*\*)/g);
+  return parts.map((p, i) => {
+    if (p.startsWith("**") && p.endsWith("**")) {
+      return <strong key={i} style={{ fontWeight:800, color:"#e2e8f0" }}>{p.slice(2,-2)}</strong>;
+    }
+    return p;
+  });
+}
+function MarkdownComment({ text }) {
+  if (!text) return null;
+  const blocks = text.split(/\n/);
+  const elements = [];
+  let i = 0;
+  while (i < blocks.length) {
+    const line = blocks[i].trim();
+    if (line === "---" || line === "***" || line === "___") {
+      elements.push(<hr key={i} style={{ border:"none", borderTop:"1px solid rgba(167,139,250,0.2)", margin:"10px 0" }} />);
+    } else if (line === "") {
+      elements.push(<div key={i} style={{ height:6 }} />);
+    } else {
+      elements.push(<div key={i} style={{ lineHeight:1.7 }}>{renderInline(line)}</div>);
+    }
+    i++;
+  }
+  return <div style={{ fontSize:13, color:"#cbd5e1" }}>{elements}</div>;
+}
 /* === UTILS === */
 const MONTHS_PL = ["sty","lut","mar","kwi","maj","cze","lip","sie","wrz","paź","lis","gru"];
 const weekRange = d => {
@@ -347,7 +375,7 @@ function FullReportBlock({ r, label, dimmed, comments={} }) {
       {expanded&&comments[r.id]&&(
         <div style={{ marginTop:10,background:"rgba(167,139,250,0.07)",border:"1.5px solid rgba(167,139,250,0.22)",borderRadius:14,padding:"14px 16px" }}>
           <div style={{ fontSize:10,color:T.violet,textTransform:"uppercase",letterSpacing:"0.1em",fontWeight:700,marginBottom:8 }}>Komentarz trenera</div>
-          <div style={{ fontSize:13,color:"#cbd5e1",lineHeight:1.7,whiteSpace:"pre-wrap" }}>{comments[r.id]}</div>
+          <MarkdownComment text={comments[r.id]} />
         </div>
       )}
     </div>
