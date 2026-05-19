@@ -803,19 +803,7 @@ function TrainerDashboard({ reports, onUpdateReports, comments, onUpdateComments
         },
         options: { scale: { ticks: { beginAtZero: true, max: 10, stepSize: 2 } } },
       };
-      // Pobierz krótki URL z QuickChart API (unika problemów z długim URL w EmailJS)
-      let radarChartUrl = "";
-      try {
-        const qcRes = await fetch("https://quickchart.io/chart/create", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ chart: chartConfig, width: 500, height: 380, backgroundColor: "white" }),
-        });
-        const qcData = await qcRes.json();
-        radarChartUrl = qcData.url || "";
-      } catch (qcErr) {
-        console.error("QuickChart API error:", qcErr);
-      }
+      const radarChartUrl = "https://quickchart.io/chart?w=500&h=380&bkg=white&c=" + encodeURIComponent(JSON.stringify(chartConfig));
       await emailjs.send(
         EMAILJS_SERVICE_ID,
         EMAILJS_TEMPLATE_COMMENT_ID,
