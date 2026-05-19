@@ -860,10 +860,10 @@ function TrainerDashboard({ reports, onUpdateReports, comments, onUpdateComments
               { key:"klatka",          label:"Klatka", unit:"cm" },
               { key:"ramie",           label:"Ramię", unit:"cm" },
             ].map(({ key, label, unit }) => {
-              const reportsWithVal = sorted.filter(r => r[key]);
+              const reportsWithVal = sorted.filter(r => r[key] && r[key] !== "brak info" && !isNaN(parseFloat(r[key])));
               const lastVal  = reportsWithVal.at(-1)?.[key];
-              const prevVal  = reportsWithVal.at(-2)?.[key];
-              const diff = lastVal && prevVal ? (parseFloat(lastVal) - parseFloat(prevVal)).toFixed(1) : null;
+              const firstVal = reportsWithVal.at(0)?.[key];
+              const diff = lastVal && firstVal && lastVal !== firstVal ? (parseFloat(lastVal) - parseFloat(firstVal)).toFixed(1) : null;
               return (
                 <div key={key} style={{
                   background:T.surface, border:`1.5px solid ${T.border}`,
@@ -880,6 +880,7 @@ function TrainerDashboard({ reports, onUpdateReports, comments, onUpdateComments
                     <div style={{ fontSize:11, fontWeight:700, marginTop:2,
                       color: parseFloat(diff) < 0 ? T.lime : T.rose }}>
                       {parseFloat(diff) > 0 ? "+" : ""}{diff} {unit}
+                      <span style={{ fontSize:9, fontWeight:400, color:T.textMuted, marginLeft:3 }}>od 1. pomiaru</span>
                     </div>
                   )}
                 </div>
