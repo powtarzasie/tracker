@@ -147,6 +147,7 @@ function renderInline(text) {
   });
 }
 function MarkdownComment({ text }) {
+  const T = useT();
   if (!text) return null;
   const blocks = text.split(/\n/);
   const elements = [];
@@ -162,7 +163,7 @@ function MarkdownComment({ text }) {
     }
     i++;
   }
-  return <div style={{ fontSize:13, color:"#cbd5e1" }}>{elements}</div>;
+  return <div style={{ fontSize:13, color:T.text }}>{elements}</div>;
 }
 /* === UTILS === */
 const MONTHS_PL = ["sty","lut","mar","kwi","maj","cze","lip","sie","wrz","paź","lis","gru"];
@@ -1161,7 +1162,7 @@ function TrainerDashboard({ reports, onUpdateReports, comments, onUpdateComments
                   {comments[r.id]&&editingId!==r.id ? (
                     <div style={{ background:"rgba(167,139,250,0.07)",border:"1.5px solid rgba(167,139,250,0.2)",borderRadius:12,padding:"12px 14px" }}>
                       <div style={{ fontSize:10,color:T.violet,textTransform:"uppercase",letterSpacing:"0.1em",fontWeight:700,marginBottom:6 }}>Komentarz trenera</div>
-                      <div style={{ fontSize:13,color:T.text,lineHeight:1.7 }}>{comments[r.id]}</div>
+                      <MarkdownComment text={comments[r.id]} />
                       <div style={{ display:"flex",gap:8,marginTop:10 }}>
                         <button onClick={()=>{ setEditingId(r.id); setDraftComment(comments[r.id]); }} style={{ fontSize:11,padding:"5px 14px",borderRadius:100,border:"1.5px solid rgba(167,139,250,0.3)",background:"transparent",color:T.violet,cursor:"pointer",fontWeight:600 }}>✏️ Edytuj</button>
                         <button onClick={()=>delComment(r.id)} style={{ fontSize:11,padding:"5px 14px",borderRadius:100,border:"1.5px solid rgba(251,113,133,0.25)",background:"transparent",color:T.rose,cursor:"pointer",fontWeight:600 }}>🗑 Usuń</button>
