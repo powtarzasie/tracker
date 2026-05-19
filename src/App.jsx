@@ -347,7 +347,7 @@ function FullReportBlock({ r, label, dimmed, comments={} }) {
       {expanded&&comments[r.id]&&(
         <div style={{ marginTop:10,background:"rgba(167,139,250,0.07)",border:"1.5px solid rgba(167,139,250,0.22)",borderRadius:14,padding:"14px 16px" }}>
           <div style={{ fontSize:10,color:T.violet,textTransform:"uppercase",letterSpacing:"0.1em",fontWeight:700,marginBottom:8 }}>Komentarz trenera</div>
-          <div style={{ fontSize:13,color:"#cbd5e1",lineHeight:1.7 }}>{comments[r.id]}</div>
+          <div style={{ fontSize:13,color:"#cbd5e1",lineHeight:1.7,whiteSpace:"pre-wrap" }}>{comments[r.id]}</div>
         </div>
       )}
     </div>
@@ -775,7 +775,19 @@ function TrainerDashboard({ reports, onUpdateReports, comments, onUpdateComments
         },
         options: { scale: { ticks: { beginAtZero: true, max: 10, stepSize: 2 } } },
       };
-      const radarChartUrl = `https://quickchart.io/chart?w=500&h=380&bkg=white&c=${encodeURIComponent(JSON.stringify(chartConfig))}`;
+      // Pobierz krótki URL z QuickChart API (unika problemów z długim URL w EmailJS)
+      let radarChartUrl = "";
+      try {
+        const qcRes = await fetch("https://quickchart.io/chart/create", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ chart: chartConfig, width: 500, height: 380, backgroundColor: "white" }),
+        });
+        const qcData = await qcRes.json();
+        radarChartUrl = qcData.url || "";
+      } catch (qcErr) {
+        console.error("QuickChart API error:", qcErr);
+      }
       await emailjs.send(
         EMAILJS_SERVICE_ID,
         EMAILJS_TEMPLATE_COMMENT_ID,
