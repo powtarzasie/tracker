@@ -58,6 +58,25 @@ async function storageSet(key, value) {
     return res.ok;
   } catch { return false; }
 }
+/* === IMAGE COMPRESSION === */
+async function compressImage(file, maxWidthPx = 1200, qualityJpeg = 0.72) {
+  return new Promise(resolve => {
+    const reader = new FileReader();
+    reader.onload = e => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement("canvas");
+        const ratio = Math.min(1, maxWidthPx / img.width);
+        canvas.width  = Math.round(img.width  * ratio);
+        canvas.height = Math.round(img.height * ratio);
+        canvas.getContext("2d").drawImage(img, 0, 0, canvas.width, canvas.height);
+        resolve(canvas.toDataURL("image/jpeg", qualityJpeg));
+      };
+      img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
 /* === DEFAULTS === */
 const defaultForm = {
   data: new Date().toISOString().split("T")[0],
@@ -67,6 +86,10 @@ const defaultForm = {
   dietaTrzymanie: "", bialko: "", kreatyna: "", kcal: "",
   energia: "", stres: "", bol: "", bolMiejsce: "",
   progres: "", odczucieTreningu: "", dietaOpis: "", zgloszenie: "",
+  // Obwody — sekcja rozwijana
+  klatka: "", ramie: "", przedramie: "", udo: "", lydka: "", barki: "",
+  // Metadane obwodów
+  obwodyNotatka: "", obwodyZdjecia: [], obwodyDataOstatnich: "",
 };
 /* === THEME === */
 const DARK_T = {
@@ -135,8 +158,8 @@ const displaySila    = v => v ? (SILA_LABEL[v]      || v)         : "–";
 const proteinColor   = (v,T) => { if (v===null||isNaN(v)) return T.textMuted; if (v<1.6) return T.rose; if (v<2.0) return "#f97316"; return T.emerald; };
 const useScoreColor  = () => { const T=useT(); return v => { if (v==null) return T.textMuted; if (v>=8) return T.lime; if (v>=6) return T.amber; if (v>=4) return "#f97316"; return T.rose; }; };
 function generateCSV(reports) {
-  const cols = ["data","sredniaTygodnia","waga","pas","zdjecia","treningiWykonane","treningiPlan","sila","sen","senJakosc","zarwanaNoc","dietaTrzymanie","bialko","kcal","kreatyna","energia","stres","bol","bolMiejsce","progres","odczucieTreningu","dietaOpis","zgloszenie"];
-  const hdrs = ["Data","Śr. wagi","Waga","Pas","Foto","Treningi","Plan","Siła","Sen h","Sen jakość","Zarwana noc","Dieta","Białko g/kg","Kcal","Kreatyna g","Energia","Stres","Ból","Gdzie","Progres","Odczucie","Dieta opis","Zgłoszenie"];
+  const cols = ["data","sredniaTygodnia","waga","pas","zdjecia","klatka","ramie","przedramie","udo","lydka","barki","obwodyNotatka","treningiWykonane","treningiPlan","sila","sen","senJakosc","zarwanaNoc","dietaTrzymanie","bialko","kcal","kreatyna","energia","stres","bol","bolMiejsce","progres","odczucieTreningu","dietaOpis","zgloszenie"];
+  const hdrs = ["Data","Śr. wagi","Waga","Talia cm","Foto","Klatka cm","Ramię cm","Przedramię cm","Udo cm","Łydka cm","Barki cm","Notatka pomiarowa","Treningi","Plan","Siła","Sen h","Sen jakość","Zarwana noc","Dieta","Białko g/kg","Kcal","Kreatyna g","Energia","Stres","Ból","Gdzie","Progres","Odczucie","Dieta opis","Zgłoszenie"];
   const esc = v => `"${String(v ?? "").replace(/"/g,'""')}"`;
   const rows = [...reports].sort((a,b)=>new Date(a.data)-new Date(b.data)).map(r => cols.map(c=>esc(r[c])).join(","));
   return [hdrs.join(","), ...rows].join("\n");
@@ -283,7 +306,7 @@ function FullReportBlock({ r, label, dimmed, comments={} }) {
         {(()=>{
           const hasPas = r.pas && r.pas !== "brak info";
           return (
-            <StatCard label="Waga" value={(r.sredniaTygodnia||r.waga)||"–"} sub={(r.sredniaTygodnia||r.waga) ? "kg" : undefined} color={fade||T.cyan} val2={hasPas ? r.pas : undefined} label2="Pas cm" color2={fade||T.violet} />
+            <StatCard label="Waga" value={(r.sredniaTygodnia||r.waga)||"–"} sub={(r.sredniaTygodnia||r.waga) ? "kg" : undefined} color={fade||T.cyan} val2={hasPas ? r.pas : undefined} label2="Talia cm" color2={fade||T.violet} />
           );
         })()}
         <StatCard label="Trening" value={r.treningiWykonane&&r.treningiPlan ? `${r.treningiWykonane}/${r.treningiPlan}` : "–"} sub={r.treningiWykonane&&r.treningiPlan ? "sesji" : undefined} color={fade||T.violet} val2={r.sila ? (r.sila==="⬆️"?"↑":r.sila==="⬇️"?"↓":"→") : undefined} label2="siła" color2={fade||(r.sila==="⬆️"?T.lime:r.sila==="⬇️"?T.rose:T.textSub)} />
@@ -330,7 +353,17 @@ function FullReportBlock({ r, label, dimmed, comments={} }) {
     </div>
   );
 }
-function ClientForm({ onSave, onExit }) {
+/* === MANDATORY MEASUREMENTS LOGIC === */
+function shouldShowMandatoryMeasurements(reports) {
+  const withObwody = [...reports]
+    .filter(r => r.klatka || r.ramie || r.udo)
+    .sort((a, b) => new Date(b.data) - new Date(a.data));
+  if (withObwody.length === 0) return true;
+  const lastDate = new Date(withObwody[0].data);
+  const diffDays = (new Date() - lastDate) / (1000 * 60 * 60 * 24);
+  return diffDays >= 28;
+}
+function ClientForm({ onSave, onExit, reports = [] }) {
   const T = useT();
   const [form,setForm] = useState(defaultForm);
   const [errors,setErrors] = useState({});
@@ -339,6 +372,9 @@ function ClientForm({ onSave, onExit }) {
   const [savedDate,setSavedDate] = useState("");
   const [quote,setQuote] = useState(null);
   const [storageOk,setStorageOk] = useState(null);
+  const isMandatoryCycle = shouldShowMandatoryMeasurements(reports);
+  const [obwodyOpen, setObwodyOpen] = useState(isMandatoryCycle);
+  const [showObwodyWarning, setShowObwodyWarning] = useState(false);
   const set = useCallback((k,v) => { setForm(f => ({ ...f, [k]:v })); setErrors(e => ({ ...e, [k]:false })); }, []);
   const required = ["data","sredniaTygodnia","treningiWykonane","treningiPlan","sen","senJakosc","dietaTrzymanie","energia","stres"];
   const validate = () => {
@@ -349,8 +385,7 @@ function ClientForm({ onSave, onExit }) {
     if (form.dietaTrzymanie==="90-100%" && !form.kcal) errs.kcal=true;
     setErrors(errs); return Object.keys(errs).length===0;
   };
-  const handleSubmit = async () => {
-    if (!validate()) { window.scrollTo({top:0,behavior:"smooth"}); return; }
+  const doSave = async () => {
     setSaving(true);
     const report = { ...form, pas:form.pas||"brak info", bialko:form.bialko||"brak info", kcal:form.kcal||"brak info", kreatyna:form.kreatyna||"brak info", id: Date.now(), savedAt: new Date().toISOString() };
     const existing = (await storageGet(STORAGE_KEY)) ?? [];
@@ -383,6 +418,13 @@ function ClientForm({ onSave, onExit }) {
           odczucieTreningu:  report.odczucieTreningu || "—",
           dietaOpis:         report.dietaOpis || "—",
           zgloszenie:        report.zgloszenie || "—",
+          klatka:            report.klatka || "—",
+          ramie:             report.ramie || "—",
+          przedramie:        report.przedramie || "—",
+          udo:               report.udo || "—",
+          lydka:             report.lydka || "—",
+          barki:             report.barki || "—",
+          obwodyNotatka:     report.obwodyNotatka || "—",
         },
         EMAILJS_PUBLIC_KEY
       );
@@ -396,6 +438,21 @@ function ClientForm({ onSave, onExit }) {
     setErrors({});
     setForm({ ...defaultForm, data: new Date().toISOString().split("T")[0] });
     setSaving(false); setSaved(true);
+  };
+  const handleSaveForce = async () => {
+    setShowObwodyWarning(false);
+    await doSave();
+  };
+  const handleSubmit = async () => {
+    if (!validate()) { window.scrollTo({top:0,behavior:"smooth"}); return; }
+    if (isMandatoryCycle && obwodyOpen) {
+      const obwodyFilled = form.klatka && form.ramie && form.udo && form.barki && form.lydka && form.przedramie;
+      if (!obwodyFilled) {
+        setShowObwodyWarning(true);
+        return;
+      }
+    }
+    await doSave();
   };
   const errCount = Object.values(errors).filter(Boolean).length;
   const errFields = { data:"Data",sredniaTygodnia:"Waga",treningiWykonane:"Sesje wykonane",treningiPlan:"Plan sesji",sen:"Długość snu",senJakosc:"Jakość snu",dietaTrzymanie:"Kontrola diety",energia:"Energia",stres:"Stres",bolMiejsce:"Gdzie boli" };
@@ -427,12 +484,139 @@ function ClientForm({ onSave, onExit }) {
       </div>
       {errCount>0&&(<div style={{ background:"rgba(251,113,133,0.08)",border:`1.5px solid ${T.rose}40`,borderRadius:12,padding:"12px 16px",marginBottom:14 }}><div style={{ display:"flex",alignItems:"center",gap:8,fontSize:13,color:T.rose,fontWeight:700,marginBottom:6 }}>⚠️ Uzupełnij wymagane pola:</div><div style={{ fontSize:12,color:T.textSub,lineHeight:1.8 }}>{Object.entries(errors).filter(([,v])=>v).map(([k])=>errFields[k]||k).join(" · ")}</div></div>)}
       <StepCard num="1" icon="📏" title="Pomiary ciała" color={T.cyan}>
-        <Field label="Data zakończenia tygodnia"><input type="date" value={form.data} onChange={e=>set("data",e.target.value)} className={inp("data")} style={{ WebkitAppearance:"none" }} /></Field>
-        <div style={{ display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,alignItems:"end" }}>
-          <Field label="Średnia waga (kg)"><input type="number" step="0.1" placeholder="np. 82.5" value={form.sredniaTygodnia} onChange={e=>set("sredniaTygodnia",e.target.value)} className={inp("sredniaTygodnia")} /></Field>
-          <div style={{ marginBottom:20 }}><label style={{ fontSize:10,color:T.textMuted,marginBottom:7,display:"block",textTransform:"uppercase",letterSpacing:"0.1em",fontWeight:700 }}>Obwód pasa (cm)</label><input type="number" step="0.5" placeholder="np. 84" value={form.pas} onChange={e=>set("pas",e.target.value)} className="fi" /></div>
+        <Field label="Data zakończenia tygodnia">
+          <input type="date" value={form.data} onChange={e=>set("data",e.target.value)} className={inp("data")} style={{ WebkitAppearance:"none" }} />
+        </Field>
+        <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12 }}>
+          <Field label="Średnia waga (kg)">
+            <input type="number" step="0.1" placeholder="np. 82.5"
+              value={form.sredniaTygodnia}
+              onChange={e=>set("sredniaTygodnia",e.target.value)}
+              className={inp("sredniaTygodnia")} />
+          </Field>
+          <Field label="Talia (cm)">
+            <input type="number" step="0.5" placeholder="np. 84"
+              value={form.pas}
+              onChange={e=>set("pas",e.target.value)}
+              className="fi" />
+          </Field>
         </div>
-        <Field label="Zdjęcia progresowe"><LabelSelect value={form.zdjecia} onChange={v=>set("zdjecia",v)} options={[{val:"TAK",label:"Zrobiłem"},{val:"NIE",label:"Nie"}]} /></Field>
+        {/* Toggle obwodów */}
+        <div
+          onClick={() => setObwodyOpen(o => !o)}
+          style={{
+            display:"flex", alignItems:"center", justifyContent:"space-between",
+            marginTop:14, marginBottom: obwodyOpen ? 12 : 0,
+            padding:"10px 14px",
+            background: isMandatoryCycle ? `${T.amber}14` : T.surface,
+            border:`1.5px solid ${isMandatoryCycle ? T.amber+"55" : T.border}`,
+            borderRadius:12, cursor:"pointer", transition:"all .15s"
+          }}
+        >
+          <div style={{ fontSize:13, fontWeight:700,
+            color: isMandatoryCycle ? T.amber : T.textSub,
+            display:"flex", alignItems:"center", gap:8 }}>
+            {isMandatoryCycle ? "⚠️" : "📐"}
+            {isMandatoryCycle
+              ? "Obwody ciała — wymagane co 4 tygodnie"
+              : (obwodyOpen ? "Obwody ciała — zwiń" : "Obwody ciała — rozwiń")}
+          </div>
+          <span style={{ color:T.textMuted, fontSize:12, transition:"transform .2s",
+            display:"inline-block", transform: obwodyOpen ? "rotate(180deg)" : "none" }}>▾</span>
+        </div>
+        {/* Sekcja obwodów — rozwijana */}
+        {obwodyOpen && (
+          <div>
+            <div style={{
+              fontSize:12, background:`${T.cyan}10`, color:T.cyan,
+              border:`0.5px solid ${T.cyan}33`, borderRadius:10,
+              padding:"8px 12px", marginBottom:12,
+              display:"flex", alignItems:"center", gap:8
+            }}>
+              ⏰ Mierz rano, na czczo, przed treningiem — zawsze o tej samej porze
+            </div>
+            <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10 }}>
+              {[
+                { key:"klatka",     label:"Klatka piersiowa",  hint:"Poziomo na wys. sutków, na wydechu, mięśnie rozluźnione." },
+                { key:"ramie",      label:"Ramię (biceps)",     hint:"Najszersze miejsce przy napiętym, zgiętym bicepsie." },
+                { key:"przedramie", label:"Przedramię",         hint:"Tuż poniżej łokcia, przy zaciśniętej pięści." },
+                { key:"udo",        label:"Udo",                hint:"Tuż pod pośladkiem, ciężar rozłożony równomiernie." },
+                { key:"lydka",      label:"Łydka",              hint:"Stojąc prosto, najszerszy punkt mięśnia brzuchatego." },
+                { key:"barki",      label:"Barki",              hint:"Najszersze miejsce obręczy barkowej — środkowe aktony." },
+              ].map(({ key, label, hint }) => (
+                <div key={key} style={{
+                  background:T.surface, border:`1.5px solid ${T.border}`,
+                  borderRadius:12, padding:"10px 12px"
+                }}>
+                  <div style={{ fontSize:11, fontWeight:700, color: isMandatoryCycle ? T.amber : T.textSub,
+                    textTransform:"uppercase", letterSpacing:"0.08em", marginBottom:4 }}>
+                    {label}{isMandatoryCycle && <span style={{ color:T.rose }}> *</span>}
+                  </div>
+                  <div style={{ fontSize:10, color:T.textMuted, lineHeight:1.4, marginBottom:8 }}>{hint}</div>
+                  <div style={{ display:"flex", alignItems:"center", gap:6 }}>
+                    <input type="number" step="0.5" placeholder="—"
+                      value={form[key]} onChange={e=>set(key, e.target.value)}
+                      className="fi" style={{ padding:"8px 10px", fontSize:14, fontWeight:700 }} />
+                    <span style={{ fontSize:12, color:T.textMuted, flexShrink:0 }}>cm</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+            {/* Upload zdjęć */}
+            <div style={{ marginTop:14 }}>
+              <div style={{ fontSize:11, fontWeight:700, color:T.textSub,
+                textTransform:"uppercase", letterSpacing:"0.08em", marginBottom:8 }}>
+                📷 Zdjęcia progress
+                <span style={{ fontSize:10, fontWeight:400, color:T.textMuted,
+                  textTransform:"none", letterSpacing:0 }}> — opcjonalne · auto-kompresja</span>
+              </div>
+              <div style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:8 }}>
+                {["przód","bok","tył"].map((lbl, idx) => {
+                  const existing = form.obwodyZdjecia?.[idx];
+                  return (
+                    <label key={lbl} style={{
+                      aspectRatio:"3/4", background: existing ? "transparent" : T.surface,
+                      border:`1.5px dashed ${T.border}`, borderRadius:12,
+                      display:"flex", flexDirection:"column", alignItems:"center",
+                      justifyContent:"center", gap:4, cursor:"pointer", overflow:"hidden",
+                      position:"relative"
+                    }}>
+                      {existing
+                        ? <img src={existing} alt={lbl} style={{ width:"100%", height:"100%", objectFit:"cover" }} />
+                        : <>
+                            <span style={{ fontSize:22 }}>📷</span>
+                            <span style={{ fontSize:11, color:T.textMuted }}>{lbl}</span>
+                          </>
+                      }
+                      <input type="file" accept="image/*" style={{ display:"none" }}
+                        onChange={async e => {
+                          const file = e.target.files?.[0];
+                          if (!file) return;
+                          const compressed = await compressImage(file);
+                          const newArr = [...(form.obwodyZdjecia?.length ? form.obwodyZdjecia : [null, null, null])];
+                          newArr[idx] = compressed;
+                          set("obwodyZdjecia", newArr);
+                        }} />
+                    </label>
+                  );
+                })}
+              </div>
+            </div>
+            {/* Notatka */}
+            <div style={{ marginTop:12 }}>
+              <div style={{ fontSize:11, fontWeight:700, color:T.textSub,
+                textTransform:"uppercase", letterSpacing:"0.08em", marginBottom:6 }}>
+                📝 Notatka do pomiaru
+                <span style={{ fontSize:10, fontWeight:400, color:T.textMuted,
+                  textTransform:"none", letterSpacing:0 }}> — opcjonalna</span>
+              </div>
+              <textarea
+                rows={2} placeholder="np. byłem nabity wodą po solonej kolacji..."
+                value={form.obwodyNotatka} onChange={e=>set("obwodyNotatka",e.target.value)}
+                className="fi" style={{ resize:"none" }} />
+            </div>
+          </div>
+        )}
       </StepCard>
       <StepCard num="2" icon="⚡" title="Jak się czujesz?" color={T.amber}>
         <Field label="Poziom energii"><EmojiSelect value={form.energia} onChange={v=>set("energia",v)} hasError={errors.energia} options={[{val:"2",emoji:"🪫",label:"Bez energii"},{val:"4",emoji:"😪",label:"Słabo"},{val:"6",emoji:"😐",label:"Przeciętnie"},{val:"8",emoji:"😊",label:"Dobrze"},{val:"10",emoji:"🔥",label:"Pełen mocy"}]} /></Field>
@@ -490,6 +674,54 @@ function ClientForm({ onSave, onExit }) {
       <div style={{ display:"flex",justifyContent:"center",marginBottom:32 }}>
         <button onClick={handleSubmit} disabled={saving} style={{ minWidth:220,padding:"14px 40px",borderRadius:100,border:`2px solid ${T.violet}`,background:"transparent",color:T.violet,fontSize:15,fontWeight:700,cursor:saving?"not-allowed":"pointer",letterSpacing:"-0.01em",transition:"all .18s ease",boxShadow:"0 0 20px rgba(167,139,250,0.15)",opacity:saving?0.5:1 }}>{saving?"Wysyłam...":"Wyślij raport"}</button>
       </div>
+      {/* Modal ostrzeżenia o brakujących obwodach */}
+      {showObwodyWarning && (
+        <div style={{
+          position:"fixed", inset:0, background:"rgba(0,0,0,0.7)",
+          display:"flex", alignItems:"center", justifyContent:"center",
+          zIndex:1000, padding:20
+        }}>
+          <div style={{
+            background:T.bg, border:`1.5px solid ${T.amber}55`,
+            borderRadius:18, padding:"28px 24px", maxWidth:380, width:"100%"
+          }}>
+            <div style={{ fontSize:36, textAlign:"center", marginBottom:12 }}>⚠️</div>
+            <div style={{ fontSize:18, fontWeight:800, color:T.amber,
+              textAlign:"center", marginBottom:10 }}>
+              To jest ważne!
+            </div>
+            <div style={{ fontSize:13, color:T.textSub, lineHeight:1.7,
+              textAlign:"center", marginBottom:20 }}>
+              Pomiary co 4 tygodnie to <strong style={{ color:T.amber }}>kluczowy wskaźnik realnego progresu</strong>.
+              Bez nich ocena skuteczności planu staje się znacznie trudniejsza.
+              <br /><br />
+              Możesz pominąć — ale robisz to <strong style={{ color:T.rose }}>na własną odpowiedzialność</strong>.
+              Grozi to spowolnieniem realnego progresu.
+            </div>
+            <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
+              <button
+                onClick={() => { setShowObwodyWarning(false); setObwodyOpen(true); }}
+                style={{
+                  padding:"12px", borderRadius:12, border:"none",
+                  background:`${T.amber}22`, color:T.amber,
+                  fontSize:14, fontWeight:700, cursor:"pointer"
+                }}>
+                ✏️ Chcę wypełnić pomiary
+              </button>
+              <button
+                onClick={handleSaveForce}
+                style={{
+                  padding:"12px", borderRadius:12,
+                  border:`1.5px solid ${T.rose}44`,
+                  background:"transparent", color:T.rose,
+                  fontSize:13, fontWeight:600, cursor:"pointer"
+                }}>
+                Pomijam na własną odpowiedzialność
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -547,6 +779,13 @@ function TrainerDashboard({ reports, onUpdateReports, comments, onUpdateComments
           odczucieTreningu:  rep?.odczucieTreningu || "—",
           dietaOpis:         rep?.dietaOpis        || "—",
           zgloszenie:        rep?.zgloszenie       || "—",
+          klatka:            rep?.klatka           || "—",
+          ramie:             rep?.ramie            || "—",
+          przedramie:        rep?.przedramie       || "—",
+          udo:               rep?.udo              || "—",
+          lydka:             rep?.lydka            || "—",
+          barki:             rep?.barki            || "—",
+          obwodyNotatka:     rep?.obwodyNotatka    || "—",
         },
         EMAILJS_PUBLIC_KEY
       );
@@ -579,7 +818,7 @@ function TrainerDashboard({ reports, onUpdateReports, comments, onUpdateComments
     <div style={{ maxWidth:720,margin:"0 auto" }}>
       {showCSV && <CSVModal reports={reports} onClose={()=>setShowCSV(false)} />}
       <div style={{ display:"flex",gap:6,marginBottom:14,background:"rgba(255,255,255,0.04)",padding:5,borderRadius:14,border:`1.5px solid ${T.border}` }}>
-        {[["overview","📊 Przegląd"],["charts","📈 Wykresy"],["history","📋 Historia"]].map(([id,label])=>(<button key={id} className={`tab-pill ${activeTab===id?"on":"off"}`} onClick={()=>setActiveTab(id)} style={{ flex:1 }}>{label}</button>))}
+        {[["overview","📊 Przegląd"],["charts","📈 Wykresy"],["history","📋 Historia"],["measurements","📐 Pomiary"]].map(([id,label])=>(<button key={id} className={`tab-pill ${activeTab===id?"on":"off"}`} onClick={()=>setActiveTab(id)} style={{ flex:1 }}>{label}</button>))}
       </div>
       {activeTab==="overview"&&(
         <div className="fade-up">
@@ -609,6 +848,185 @@ function TrainerDashboard({ reports, onUpdateReports, comments, onUpdateComments
           {pasData.length>=1&&<ChartCard title="📏 Trend pasa (cm)" accent={T.violet}><ResponsiveContainer width="100%" height={150}><LineChart data={pasData}><CartesianGrid strokeDasharray="3 3" stroke={gridStroke}/><XAxis dataKey="name" tick={tickStyle} axisLine={false} tickLine={false}/><YAxis tick={tickStyle} domain={["auto","auto"]} axisLine={false} tickLine={false}/><Tooltip contentStyle={tooltipStyle}/><Line type="monotone" dataKey="val" stroke={T.violet} strokeWidth={2.5} dot={{fill:T.violet,r:5,strokeWidth:0}} name="Pas (cm)"/></LineChart></ResponsiveContainer></ChartCard>}
           {wellnessData.length>=1&&(<ChartCard title="⚡ Wellbeing — Energia / Sen / Stres / Dieta" accent={T.emerald}><div style={{ display:"flex",gap:14,marginBottom:12,flexWrap:"wrap" }}>{[["Energia",T.amber],["Sen",T.emerald],["Stres",T.rose],["Dieta",T.cyan]].map(([n,c])=><div key={n} style={{ display:"flex",alignItems:"center",gap:6,fontSize:11,color:T.textMuted }}><div style={{ width:22,height:3,background:c,borderRadius:2 }}/>{n}</div>)}</div><ResponsiveContainer width="100%" height={190}><LineChart data={wellnessData}><CartesianGrid strokeDasharray="3 3" stroke={gridStroke}/><XAxis dataKey="name" tick={tickStyle} axisLine={false} tickLine={false}/><YAxis tick={tickStyle} domain={[0,10]} axisLine={false} tickLine={false}/><Tooltip contentStyle={tooltipStyle}/><Line type="monotone" dataKey="Energia" stroke={T.amber} strokeWidth={2} dot={{r:4,fill:T.amber,strokeWidth:0}} connectNulls/><Line type="monotone" dataKey="Sen" stroke={T.emerald} strokeWidth={2} dot={{r:4,fill:T.emerald,strokeWidth:0}} connectNulls/><Line type="monotone" dataKey="Stres" stroke={T.rose} strokeWidth={2} dot={{r:4,fill:T.rose,strokeWidth:0}} connectNulls/><Line type="monotone" dataKey="Dieta" stroke={T.cyan} strokeWidth={2} dot={{r:4,fill:T.cyan,strokeWidth:0}} connectNulls/></LineChart></ResponsiveContainer></ChartCard>)}
           {trainingData.length>=1&&<ChartCard title="🏋 Treningi — wykonane vs plan" accent={T.violet}><ResponsiveContainer width="100%" height={160}><BarChart data={trainingData} barCategoryGap="35%"><CartesianGrid strokeDasharray="3 3" stroke={gridStroke}/><XAxis dataKey="name" tick={tickStyle} axisLine={false} tickLine={false}/><YAxis tick={tickStyle} axisLine={false} tickLine={false}/><Tooltip contentStyle={tooltipStyle}/><Bar dataKey="Plan" fill={T.bg==="#07090f"?"rgba(167,139,250,0.15)":"rgba(124,58,237,0.1)"} radius={[6,6,0,0]}/><Bar dataKey="Wykonane" fill={T.violet} radius={[6,6,0,0]}/></BarChart></ResponsiveContainer></ChartCard>}
+        </div>
+      )}
+      {activeTab==="measurements"&&(
+        <div className="fade-up">
+          {/* Karty KPI — ostatnie wartości */}
+          <div style={{ display:"grid", gridTemplateColumns:"repeat(4,1fr)", gap:8, marginBottom:16 }}>
+            {[
+              { key:"sredniaTygodnia", label:"Waga", unit:"kg" },
+              { key:"pas",             label:"Talia", unit:"cm" },
+              { key:"klatka",          label:"Klatka", unit:"cm" },
+              { key:"ramie",           label:"Ramię", unit:"cm" },
+            ].map(({ key, label, unit }) => {
+              const reportsWithVal = sorted.filter(r => r[key]);
+              const lastVal  = reportsWithVal.at(-1)?.[key];
+              const prevVal  = reportsWithVal.at(-2)?.[key];
+              const diff = lastVal && prevVal ? (parseFloat(lastVal) - parseFloat(prevVal)).toFixed(1) : null;
+              return (
+                <div key={key} style={{
+                  background:T.surface, border:`1.5px solid ${T.border}`,
+                  borderRadius:12, padding:"10px 12px"
+                }}>
+                  <div style={{ fontSize:10, color:T.textMuted, marginBottom:4,
+                    textTransform:"uppercase", letterSpacing:"0.08em", fontWeight:700 }}>
+                    {label}
+                  </div>
+                  <div style={{ fontSize:20, fontWeight:800, color:T.text }}>
+                    {lastVal || "–"} <span style={{ fontSize:11, fontWeight:400 }}>{lastVal ? unit : ""}</span>
+                  </div>
+                  {diff && (
+                    <div style={{ fontSize:11, fontWeight:700, marginTop:2,
+                      color: parseFloat(diff) < 0 ? T.lime : T.rose }}>
+                      {parseFloat(diff) > 0 ? "+" : ""}{diff} {unit}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+          {/* Tabela historii obwodów */}
+          <div style={{
+            background:T.surface, border:`1.5px solid ${T.border}`,
+            borderRadius:16, padding:"16px 18px", marginBottom:14, overflowX:"auto"
+          }}>
+            <div style={{ fontSize:10, fontWeight:700, color:T.violet,
+              textTransform:"uppercase", letterSpacing:"0.1em", marginBottom:12 }}>
+              Historia pomiarów
+            </div>
+            <table style={{ width:"100%", borderCollapse:"collapse", fontSize:12 }}>
+              <thead>
+                <tr>
+                  {["Data","Waga","Talia","Klatka","Ramię","Przeds.","Udo","Łydka","Barki"].map(h => (
+                    <th key={h} style={{ textAlign:"left", padding:"4px 8px",
+                      color:T.textMuted, fontWeight:700, fontSize:10,
+                      textTransform:"uppercase", letterSpacing:"0.06em",
+                      borderBottom:`1px solid ${T.border}` }}>
+                      {h}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {[...sorted].reverse()
+                  .filter(r => r.klatka || r.ramie || r.pas)
+                  .map((r, i, arr) => {
+                    const prev2 = arr[i + 1];
+                    const delta = (key) => {
+                      if (!r[key] || !prev2?.[key]) return null;
+                      return (parseFloat(r[key]) - parseFloat(prev2[key])).toFixed(1);
+                    };
+                    const cell = (key) => {
+                      const val = r[key];
+                      const d = delta(key);
+                      if (!val || val === "brak info") return <td style={{ padding:"6px 8px", color:T.textMuted, opacity:0.4 }}>—</td>;
+                      return (
+                        <td style={{ padding:"6px 8px", color:T.text }}>
+                          {val}
+                          {d && (
+                            <span style={{ fontSize:10, fontWeight:700, marginLeft:4,
+                              color: parseFloat(d) < 0 ? T.lime : T.rose }}>
+                              {parseFloat(d) > 0 ? "▲" : "▼"}{Math.abs(d)}
+                            </span>
+                          )}
+                        </td>
+                      );
+                    };
+                    return (
+                      <tr key={r.id} style={{ borderBottom:`0.5px solid ${T.border}` }}>
+                        <td style={{ padding:"6px 8px", color:T.textMuted, fontWeight:600, whiteSpace:"nowrap" }}>
+                          {r.data?.slice(5)}
+                        </td>
+                        {cell("sredniaTygodnia")}
+                        {cell("pas")}
+                        {cell("klatka")}
+                        {cell("ramie")}
+                        {cell("przedramie")}
+                        {cell("udo")}
+                        {cell("lydka")}
+                        {cell("barki")}
+                      </tr>
+                    );
+                  })}
+              </tbody>
+            </table>
+          </div>
+          {/* Wykres trendu talii */}
+          {pasData.length >= 1 && (
+            <ChartCard title="📏 Trend talii (cm)" accent={T.violet}>
+              <ResponsiveContainer width="100%" height={150}>
+                <LineChart data={pasData}>
+                  <CartesianGrid strokeDasharray="3 3" stroke={gridStroke}/>
+                  <XAxis dataKey="name" tick={tickStyle} axisLine={false} tickLine={false}/>
+                  <YAxis tick={tickStyle} domain={["auto","auto"]} axisLine={false} tickLine={false}/>
+                  <Tooltip contentStyle={tooltipStyle}/>
+                  <Line type="monotone" dataKey="val" stroke={T.violet}
+                    strokeWidth={2.5} dot={{fill:T.violet,r:5,strokeWidth:0}} name="Talia (cm)"/>
+                </LineChart>
+              </ResponsiveContainer>
+            </ChartCard>
+          )}
+          {/* Galeria zdjęć progress */}
+          {sorted.filter(r => r.obwodyZdjecia?.some(Boolean)).length > 0 && (
+            <div style={{
+              background:T.surface, border:`1.5px solid ${T.border}`,
+              borderRadius:16, padding:"16px 18px", marginBottom:14
+            }}>
+              <div style={{ fontSize:10, fontWeight:700, color:T.textMuted,
+                textTransform:"uppercase", letterSpacing:"0.1em", marginBottom:12 }}>
+                📷 Zdjęcia progress
+              </div>
+              <div style={{ display:"flex", gap:10, overflowX:"auto" }}>
+                {[...sorted]
+                  .filter(r => r.obwodyZdjecia?.some(Boolean))
+                  .reverse()
+                  .map(r => (
+                    <div key={r.id} style={{ flexShrink:0, width:80 }}>
+                      <div style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:2, marginBottom:4 }}>
+                        {(r.obwodyZdjecia || []).map((src, i) => (
+                          src
+                            ? <img key={i} src={src} alt=""
+                                style={{ width:"100%", aspectRatio:"3/4", objectFit:"cover", borderRadius:6 }} />
+                            : <div key={i} style={{ width:"100%", aspectRatio:"3/4",
+                                background:T.border, borderRadius:6, opacity:0.3 }} />
+                        ))}
+                      </div>
+                      <div style={{ fontSize:10, color:T.textMuted, textAlign:"center" }}>
+                        {r.data?.slice(5)}
+                      </div>
+                    </div>
+                  ))}
+              </div>
+            </div>
+          )}
+          {/* Notatki do pomiarów */}
+          {sorted.filter(r => r.obwodyNotatka).length > 0 && (
+            <div style={{
+              background:T.surface, border:`1.5px solid ${T.border}`,
+              borderRadius:16, padding:"16px 18px"
+            }}>
+              <div style={{ fontSize:10, fontWeight:700, color:T.textMuted,
+                textTransform:"uppercase", letterSpacing:"0.1em", marginBottom:12 }}>
+                📝 Notatki do pomiarów
+              </div>
+              {[...sorted].filter(r => r.obwodyNotatka).reverse().map(r => (
+                <div key={r.id} style={{ marginBottom:10 }}>
+                  <div style={{ fontSize:10, color:T.textMuted, marginBottom:3, fontWeight:700 }}>
+                    {r.data?.slice(5)}
+                  </div>
+                  <div style={{
+                    background:`${T.violet}0a`, border:`0.5px solid ${T.violet}22`,
+                    borderLeft:`2px solid ${T.violet}66`,
+                    borderRadius:"0 10px 10px 0", padding:"8px 12px",
+                    fontSize:12, color:T.textSub, fontStyle:"italic", lineHeight:1.6
+                  }}>
+                    {r.obwodyNotatka}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
       {activeTab==="history"&&(
@@ -832,7 +1250,7 @@ export default function App() {
           </div>
         </div>
         <div style={{ padding:"26px 16px 0" }}>
-          {view==="client" ? <ClientForm onSave={handleNewReport} onExit={()=>setView("trainer")} /> : <TrainerDashboard reports={reports} onUpdateReports={handleUpdateReports} comments={comments} onUpdateComments={handleUpdateComments} />}
+          {view==="client" ? <ClientForm onSave={handleNewReport} onExit={()=>setView("trainer")} reports={reports} /> : <TrainerDashboard reports={reports} onUpdateReports={handleUpdateReports} comments={comments} onUpdateComments={handleUpdateComments} />}
         </div>
       </div>
     </ThemeCtx.Provider>
